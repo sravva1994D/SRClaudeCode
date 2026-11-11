@@ -63,6 +63,45 @@ public sealed class Appointment
         return new Appointment(0, patientId, slotStartUtc, AppointmentStatuses.Scheduled, isActive: true, Array.Empty<byte>());
     }
 
+    /// <summary>
+    /// Moves a scheduled appointment to a new future slot. Only scheduled appointments can move; a completed, cancelled
+    /// or no-show appointment is final. The same slot rules as booking apply.
+    /// </summary>
+    public void Reschedule(DateTime newSlotStartUtc, DateTime nowUtc)
+    {
+        if (StatusId != AppointmentStatuses.Scheduled)
+        {
+            throw new DomainException("appointment_not_reschedulable", "Only a scheduled appointment can be moved.");
+        }
+
+        EnsureOnQuarterHour(newSlotStartUtc);
+        if (newSlotStartUtc <= nowUtc)
+        {
+            throw new DomainException("appointment_in_past", "An appointment must be moved to a future time.");
+        }
+
+        SlotStartUtc = newSlotStartUtc;
+    }
+
+    /// <summary>
+    /// Records the outcome of a scheduled appointment: completed, cancelled or no-show. The status can be set once; a
+    /// cancelled appointment frees its slot in the database.
+    /// </summary>
+    public void ChangeStatus(int targetStatusId)
+    {
+        if (targetStatusId is not (AppointmentStatuses.Completed or AppointmentStatuses.Cancelled or AppointmentStatuses.NoShow))
+        {
+            throw new DomainException("invalid_status_transition", "An appointment can only be completed, cancelled or marked no-show.");
+        }
+
+        if (StatusId != AppointmentStatuses.Scheduled)
+        {
+            throw new DomainException("appointment_status_locked", "This appointment's status has already been set.");
+        }
+
+        StatusId = targetStatusId;
+    }
+
     /// <summary>Rebuilds an appointment from a stored row.</summary>
     public static Appointment Reconstitute(
         int appointmentId,
