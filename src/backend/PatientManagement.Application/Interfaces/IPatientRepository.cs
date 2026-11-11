@@ -9,6 +9,17 @@ public interface IPatientRepository
     /// <summary>Returns the active patient with this id, or null when there is none.</summary>
     Task<Patient?> FindActiveAsync(int patientId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Returns up to <paramref name="maximumCount"/> active patients with this name and date of birth. Names match
+    /// without regard to case, and <paramref name="excludePatientId"/> leaves one patient out (the one being edited).
+    /// </summary>
+    Task<IReadOnlyList<Patient>> FindActiveDuplicatesAsync(
+        string fullName,
+        DateOnly dateOfBirth,
+        int? excludePatientId,
+        int maximumCount,
+        CancellationToken cancellationToken);
+
     /// <summary>Inserts a new patient and sets its id and row version.</summary>
     Task AddAsync(Patient patient, int changedByUserId, CancellationToken cancellationToken);
 

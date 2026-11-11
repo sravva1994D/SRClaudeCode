@@ -1,3 +1,4 @@
+using System.Data;
 using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
@@ -21,6 +22,18 @@ public sealed class SqlPatientRepository(
         SELECT PatientId, FullName, DateOfBirth, GenderId, PhoneNumber, Address, IsActive, RowVersion
         FROM dbo.Patients
         WHERE PatientId = @PatientId AND IsActive = 1;
+        """;
+
+    // Name equality relies on the database's case-insensitive collation, which the development database uses.
+    // The name is trimmed on write, so comparing without trimming here is correct.
+    private const string FindDuplicatesSql = """
+        SELECT TOP (@MaximumCount) PatientId, FullName, DateOfBirth, GenderId, PhoneNumber, Address, IsActive, RowVersion
+        FROM dbo.Patients
+        WHERE IsActive = 1
+          AND DateOfBirth = @DateOfBirth
+          AND FullName = @FullName
+          AND (@ExcludePatientId IS NULL OR PatientId <> @ExcludePatientId)
+        ORDER BY PatientId;
         """;
 
     // OUTPUT returns the new id and row version, so no second round trip is needed.
@@ -57,6 +70,35 @@ public sealed class SqlPatientRepository(
 
         await using var connection = await connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         return await ReadAsync(connection, transaction: null, patientId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Patient>> FindActiveDuplicatesAsync(
+        string fullName,
+        DateOnly dateOfBirth,
+        int? excludePatientId,
+        int maximumCount,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = FindDuplicatesSql;
+        command.CommandTimeout = options.Value.CommandTimeoutSeconds;
+        command.Parameters.Add(new SqlParameter("@MaximumCount", maximumCount));
+        command.Parameters.Add(new SqlParameter("@FullName", fullName));
+        command.Parameters.Add(new SqlParameter("@DateOfBirth", dateOfBirth.ToDateTime(TimeOnly.MinValue)));
+        command.Parameters.Add(new SqlParameter("@ExcludePatientId", SqlDbType.Int)
+        {
+            Value = (object?)excludePatientId ?? DBNull.Value,
+        });
+
+        var matches = new List<Patient>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            matches.Add(ReadPatient(reader));
+        }
+
+        return matches;
     }
 
     public async Task AddAsync(Patient patient, int changedByUserId, CancellationToken cancellationToken)
@@ -140,16 +182,18 @@ public sealed class SqlPatientRepository(
             return null;
         }
 
-        return Patient.Reconstitute(
-            reader.GetInt32(0),
-            reader.GetString(1),
-            DateOnly.FromDateTime(reader.GetDateTime(2)),
-            reader.GetInt32(3),
-            NullableString(reader, 4),
-            NullableString(reader, 5),
-            reader.GetBoolean(6),
-            (byte[])reader.GetValue(7));
+        return ReadPatient(reader);
     }
+
+    private static Patient ReadPatient(DbDataReader reader) => Patient.Reconstitute(
+        reader.GetInt32(0),
+        reader.GetString(1),
+        DateOnly.FromDateTime(reader.GetDateTime(2)),
+        reader.GetInt32(3),
+        NullableString(reader, 4),
+        NullableString(reader, 5),
+        reader.GetBoolean(6),
+        (byte[])reader.GetValue(7));
 
     private static void AddFieldParameters(DbCommand command, Patient patient)
     {

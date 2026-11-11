@@ -42,6 +42,24 @@ public sealed class CreatePatientCommandValidator : AbstractValidator<CreatePati
     }
 }
 
+/// <summary>The duplicate lookup needs a name and a date of birth. Both use the same limits as the patient form.</summary>
+public sealed class FindDuplicatePatientsQueryValidator : AbstractValidator<FindDuplicatePatientsQuery>
+{
+    public FindDuplicatePatientsQueryValidator()
+    {
+        RuleFor(query => query.FullName)
+            .NotEmpty()
+            .MaximumLength(PatientFieldsValidator.MaximumNameLength);
+
+        RuleFor(query => query.DateOfBirth)
+            .GreaterThan(new DateOnly(1900, 1, 1));
+
+        RuleFor(query => query.ExcludePatientId)
+            .GreaterThan(0)
+            .When(query => query.ExcludePatientId.HasValue);
+    }
+}
+
 public sealed class UpdatePatientCommandValidator : AbstractValidator<UpdatePatientCommand>
 {
     public UpdatePatientCommandValidator()
