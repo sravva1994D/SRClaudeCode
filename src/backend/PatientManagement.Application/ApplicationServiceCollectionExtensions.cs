@@ -22,6 +22,13 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<Clinic.Handlers.GetClinicProfileQueryHandler>();
         services.AddScoped<Clinic.Handlers.UpdateClinicProfileCommandHandler>();
         services.AddScoped<IValidator<Clinic.UpdateClinicProfileCommand>, Validators.UpdateClinicProfileCommandValidator>();
+
+        services.AddScoped<Patients.Handlers.GetPatientQueryHandler>();
+        services.AddScoped<Patients.Handlers.CreatePatientCommandHandler>();
+        services.AddScoped<Patients.Handlers.UpdatePatientCommandHandler>();
+        services.AddScoped<Patients.Handlers.DeletePatientCommandHandler>();
+        services.AddScoped<IValidator<Patients.CreatePatientCommand>, Validators.CreatePatientCommandValidator>();
+        services.AddScoped<IValidator<Patients.UpdatePatientCommand>, Validators.UpdatePatientCommandValidator>();
         return services;
     }
 }

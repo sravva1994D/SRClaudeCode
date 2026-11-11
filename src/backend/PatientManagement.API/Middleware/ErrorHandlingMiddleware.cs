@@ -41,6 +41,12 @@ public sealed partial class ErrorHandlingMiddleware(RequestDelegate next, ILogge
             LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
             await WriteErrorAsync(context, StatusCodes.Status409Conflict, exception.ErrorCode, exception.Message);
         }
+        catch (RecordNotFoundException exception)
+        {
+            // Checked before DomainException. Not-found is 404 and never reveals whether other users' records exist (CLAUDE.md 10.3).
+            LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
+            await WriteErrorAsync(context, StatusCodes.Status404NotFound, exception.ErrorCode, exception.Message);
+        }
         catch (DomainException exception)
         {
             LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
