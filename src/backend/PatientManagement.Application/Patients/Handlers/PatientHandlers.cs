@@ -17,6 +17,25 @@ public sealed class GetPatientQueryHandler(IPatientRepository patients)
     }
 }
 
+/// <summary>Returns the active patients that match a name and date of birth. The duplicate warning shows at most five.</summary>
+public sealed class FindDuplicatePatientsQueryHandler(IPatientRepository patients)
+{
+    public const int MaximumMatches = 5;
+
+    public async Task<IReadOnlyList<PatientSummary>> HandleAsync(
+        FindDuplicatePatientsQuery query,
+        CancellationToken cancellationToken)
+    {
+        var matches = await patients.FindActiveDuplicatesAsync(
+            query.FullName.Trim(),
+            query.DateOfBirth,
+            query.ExcludePatientId,
+            MaximumMatches,
+            cancellationToken);
+        return matches.Select(PatientSummary.From).ToList();
+    }
+}
+
 /// <summary>Registers a patient. The insert and its audit row commit together.</summary>
 public sealed class CreatePatientCommandHandler(
     IUnitOfWork unitOfWork,

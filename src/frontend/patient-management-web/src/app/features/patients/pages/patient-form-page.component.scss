@@ -1,0 +1,70 @@
+.patient-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 640px;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+
+  mat-form-field {
+    flex: 1;
+  }
+}
+
+.age {
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0 0;
+  min-width: 80px;
+
+  span {
+    font-size: 0.85rem;
+  }
+
+  strong {
+    font-size: 1.25rem;
+  }
+}
+
+.duplicate-warning {
+  border-left: 4px solid currentColor;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+
+  p {
+    margin: 0 0 4px;
+    font-weight: 600;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+}
+
+.save-error {
+  color: var(--mat-sys-error, #b3261e);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+@media (max-width: 767px) {
+  .row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .age {
+    margin-top: 0;
+  }
+}

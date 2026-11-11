@@ -18,8 +18,30 @@ public sealed class PatientsController(
     DeletePatientCommandHandler deletePatient,
     IValidator<CreatePatientCommand> createValidator,
     IValidator<UpdatePatientCommand> updateValidator,
+    FindDuplicatePatientsQueryHandler findDuplicates,
+    IValidator<FindDuplicatePatientsQuery> duplicateQueryValidator,
     ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Returns active patients with the same name and date of birth. Used by the patient form to warn before a
+    /// duplicate is saved; the warning does not block the save.
+    /// </summary>
+    [HttpGet("duplicates")]
+    [ProducesResponseType<IReadOnlyList<PatientSummary>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IReadOnlyList<PatientSummary>>> FindDuplicates(
+        [FromQuery] string? fullName,
+        [FromQuery] DateOnly? dateOfBirth,
+        [FromQuery] int? excludePatientId,
+        CancellationToken cancellationToken)
+    {
+        var query = new FindDuplicatePatientsQuery(fullName ?? string.Empty, dateOfBirth ?? default, excludePatientId);
+        await duplicateQueryValidator.ValidateAndThrowAsync(query, cancellationToken);
+
+        return Ok(await findDuplicates.HandleAsync(query, cancellationToken));
+    }
+
     /// <summary>Returns one active patient.</summary>
     [HttpGet("{patientId:int}")]
     [ProducesResponseType<PatientDetails>(StatusCodes.Status200OK)]

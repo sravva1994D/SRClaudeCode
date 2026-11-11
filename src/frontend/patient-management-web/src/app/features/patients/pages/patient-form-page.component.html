@@ -1,0 +1,105 @@
+<section class="patient-form">
+  <h1>
+    @if (patientId() === undefined) {
+      {{ 'patients.newTitle' | translate }}
+    } @else {
+      {{ 'patients.editTitle' | translate }}
+    }
+  </h1>
+
+  @if (loading()) {
+    <mat-progress-bar
+      mode="indeterminate"
+      [attr.aria-label]="'patients.loading' | translate"
+    ></mat-progress-bar>
+  } @else {
+    @if (duplicates().length > 0) {
+      <div class="duplicate-warning" role="alert">
+        <p>{{ 'patients.duplicateWarning' | translate }}</p>
+        <ul>
+          @for (match of duplicates(); track match.patientId) {
+            <li>{{ match.fullName }}, {{ match.dateOfBirth | date: 'mediumDate' }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'patients.fullName' | translate }}</mat-label>
+        <input matInput formControlName="fullName" autocomplete="off" />
+        @if (form.controls.fullName.hasError('required')) {
+          <mat-error>{{ 'validation.required' | translate }}</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="row">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'patients.dateOfBirth' | translate }}</mat-label>
+          <input matInput type="date" formControlName="dateOfBirth" [max]="today" />
+          @if (form.controls.dateOfBirth.hasError('required')) {
+            <mat-error>{{ 'validation.required' | translate }}</mat-error>
+          } @else if (form.controls.dateOfBirth.hasError('dateOfBirthInFuture')) {
+            <mat-error>{{ 'patients.dateOfBirthInFuture' | translate }}</mat-error>
+          } @else if (form.controls.dateOfBirth.invalid) {
+            <mat-error>{{ 'patients.dateOfBirthInvalid' | translate }}</mat-error>
+          }
+        </mat-form-field>
+
+        <p class="age" aria-live="polite">
+          <span>{{ 'patients.age' | translate }}</span>
+          <strong>{{ (form.controls.dateOfBirth.value | age) ?? '—' }}</strong>
+        </p>
+      </div>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'patients.gender' | translate }}</mat-label>
+        <mat-select formControlName="genderId">
+          @for (option of genderOptions; track option.id) {
+            <mat-option [value]="option.id">{{ option.labelKey | translate }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.genderId.hasError('required')) {
+          <mat-error>{{ 'validation.required' | translate }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'patients.phoneNumber' | translate }}</mat-label>
+        <input matInput formControlName="phoneNumber" autocomplete="tel" />
+        @if (
+          form.controls.phoneNumber.hasError('phoneNumber') ||
+          form.controls.phoneNumber.hasError('maxlength')
+        ) {
+          <mat-error>{{ 'patients.phoneInvalid' | translate }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'patients.address' | translate }}</mat-label>
+        <textarea matInput formControlName="address" rows="2"></textarea>
+        @if (form.controls.address.hasError('maxlength')) {
+          <mat-error>{{ 'patients.addressTooLong' | translate }}</mat-error>
+        }
+      </mat-form-field>
+
+      @if (saveError(); as message) {
+        <p class="save-error" role="alert">{{ message }}</p>
+      }
+
+      <div class="actions">
+        <a mat-button routerLink="/patients">{{ 'patients.cancel' | translate }}</a>
+        <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
+          {{ 'patients.save' | translate }}
+        </button>
+      </div>
+
+      @if (saving()) {
+        <mat-progress-bar
+          mode="indeterminate"
+          [attr.aria-label]="'patients.saving' | translate"
+        ></mat-progress-bar>
+      }
+    </form>
+  }
+</section>
