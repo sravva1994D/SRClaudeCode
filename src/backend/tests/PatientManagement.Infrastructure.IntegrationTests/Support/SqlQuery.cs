@@ -17,4 +17,17 @@ public static class SqlQuery
 #pragma warning restore CA2100
         return Convert.ToInt32(await command.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture);
     }
+
+    public static async Task ExecuteAsync(string connectionString, string sql)
+    {
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+
+        // Callers pass literal test statements only; the helper is never given input from elsewhere.
+#pragma warning disable CA2100
+        command.CommandText = sql;
+#pragma warning restore CA2100
+        await command.ExecuteNonQueryAsync();
+    }
 }
