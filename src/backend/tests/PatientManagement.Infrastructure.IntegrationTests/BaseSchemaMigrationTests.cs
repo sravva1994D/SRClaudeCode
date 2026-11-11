@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Data.SqlClient;
 using PatientManagement.Infrastructure.IntegrationTests.Support;
+using PatientManagement.Infrastructure.Migrations;
 
 namespace PatientManagement.Infrastructure.IntegrationTests;
 
@@ -33,7 +34,9 @@ public sealed class BaseSchemaMigrationTests
         await using var database = await TestDatabase.CreateAsync();
         await MigrateAsync(database);
 
-        (await SqlQuery.ScalarIntAsync(database.ConnectionString, CountHistoryRowsSql)).Should().Be(7);
+        // Compare with the scripts compiled into the build, so adding a migration does not need this test edited.
+        var embeddedScriptCount = EmbeddedMigrationScripts.Load(typeof(MigrationRunner).Assembly).Count;
+        (await SqlQuery.ScalarIntAsync(database.ConnectionString, CountHistoryRowsSql)).Should().Be(embeddedScriptCount);
     }
 
     [Fact]
