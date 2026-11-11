@@ -1,5 +1,10 @@
 import { Routes } from '@angular/router';
 
-import { placeholderRoutes } from '../../shared/routing/placeholder-routes';
-
-export const DASHBOARD_ROUTES: Routes = placeholderRoutes('nav.dashboard');
+export const DASHBOARD_ROUTES: Routes = [
+  {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./dashboard-page.component').then((module) => module.DashboardPageComponent),
+  },
+];

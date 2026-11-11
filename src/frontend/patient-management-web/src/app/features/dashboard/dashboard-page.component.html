@@ -1,0 +1,62 @@
+<section class="dashboard">
+  <h1>{{ 'nav.dashboard' | translate }}</h1>
+
+  <section class="quick-actions" aria-labelledby="quick-heading">
+    <h2 id="quick-heading">{{ 'dashboard.quickActions' | translate }}</h2>
+    <div class="actions">
+      <a mat-flat-button color="primary" routerLink="/patients/new">{{
+        'dashboard.newPatient' | translate
+      }}</a>
+      <a mat-stroked-button routerLink="/patients">{{ 'dashboard.findPatient' | translate }}</a>
+      <a mat-stroked-button routerLink="/appointments">{{
+        'dashboard.openCalendar' | translate
+      }}</a>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <mat-progress-bar
+      mode="indeterminate"
+      [attr.aria-label]="'dashboard.loading' | translate"
+    ></mat-progress-bar>
+  }
+
+  @if (loadFailed()) {
+    <p class="error" role="alert">{{ 'dashboard.loadFailed' | translate }}</p>
+  }
+
+  @if (!loading()) {
+    <section class="agenda" aria-labelledby="today-heading">
+      <h2 id="today-heading">{{ 'dashboard.todayTitle' | translate }}</h2>
+      @if (agenda().today.length === 0) {
+        <p class="empty">{{ 'dashboard.noToday' | translate }}</p>
+      } @else {
+        <ul class="rows">
+          @for (item of agenda().today; track item.appointmentId) {
+            <li class="row">
+              <span class="time">{{ item.slotStartUtc | date: 'shortTime' }}</span>
+              <a [routerLink]="['/patients', item.patientId]">{{ item.patientFullName }}</a>
+              <span class="status">{{ statusKey(item.statusId) | translate }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="agenda" aria-labelledby="upcoming-heading">
+      <h2 id="upcoming-heading">{{ 'dashboard.upcomingTitle' | translate }}</h2>
+      @if (agenda().upcoming.length === 0) {
+        <p class="empty">{{ 'dashboard.noUpcoming' | translate }}</p>
+      } @else {
+        <ul class="rows">
+          @for (item of agenda().upcoming; track item.appointmentId) {
+            <li class="row">
+              <span class="time">{{ item.slotStartUtc | date: 'EEE d MMM, shortTime' }}</span>
+              <a [routerLink]="['/patients', item.patientId]">{{ item.patientFullName }}</a>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</section>
