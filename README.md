@@ -18,7 +18,52 @@ A browser-based patient management system for one general physician in one clini
 
 ## Local setup
 
-Setup and run commands will be added as Sprint 1 step 5 (local build and test scripts) is completed.
+Prerequisites: .NET SDK 10, Node.js 22 LTS, SQL Server LocalDB (`(LocalDb)\MSSQLLocalDB`, installed with Visual Studio or SQL Server Express).
+
+### Backend
+
+| Task | Command (from the repository root) |
+|------|-------------------------------------|
+| Build | `dotnet build src/backend/PatientManagement.sln` |
+| Run the API (migrations apply at startup in Development) | `dotnet run --project src/backend/PatientManagement.API` |
+| Unit tests | `dotnet test src/backend/PatientManagement.sln --filter "FullyQualifiedName!~IntegrationTests"` |
+| Integration tests (create and drop test databases on LocalDB) | `dotnet test src/backend/tests/PatientManagement.Infrastructure.IntegrationTests` and `dotnet test src/backend/tests/PatientManagement.API.IntegrationTests` |
+| Format | `dotnet format src/backend/PatientManagement.sln` |
+| Vulnerable packages | `dotnet list src/backend/PatientManagement.sln package --vulnerable --include-transitive` |
+
+Health check: `GET /health` (200 when the database answers, 503 otherwise). Swagger UI: `/swagger` in Development only.
+
+### Synthetic development data
+
+Run once on a fresh machine, and again after a database reset. It creates the `PatientManagement` database if missing, applies migrations, and seeds a synthetic doctor account (`dev.doctor`) and placeholder clinic text. It is safe to re-run.
+
+```
+$env:PM_SEED_DOCTOR_PASSWORD = '<a password that meets the policy>'
+dotnet run --project src/backend/tools/PatientManagement.Seeder
+```
+
+The password is read from the environment and never stored. Set `PM_CONNECTION_STRING` to seed a different database. Never point the seeder at a database that holds real patients.
+
+### Frontend
+
+From `src/frontend/patient-management-web`:
+
+| Task | Command |
+|------|---------|
+| Install packages | `npm ci` |
+| Run (http://localhost:4200) | `npm start` |
+| Unit tests | `npm test` |
+| Lint and format check | `npm run lint` and `npm run format:check` |
+| Build | `npm run build` |
+| Dependency audit | `npm audit` |
+
+### All quality gates
+
+`pwsh ./scripts/verify.ps1` runs the backend build (Release, warnings as errors), unit and integration tests, the vulnerable-package check, and the frontend lint, format, test, build and audit. Use `-SkipFrontend` or `-SkipIntegration` to run a subset. Run it before opening a pull request; there is no CI pipeline in Phase 1.
+
+### Configuration
+
+Development settings are in `appsettings.Development.json` (LocalDB, Windows authentication, migrations on startup). Nothing secret is stored in the repository. The JWT signing key and any credentials go in user secrets (added in Sprint 2).
 
 ## Data
 
