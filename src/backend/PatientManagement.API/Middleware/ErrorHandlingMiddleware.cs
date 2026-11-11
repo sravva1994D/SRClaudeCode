@@ -47,6 +47,12 @@ public sealed partial class ErrorHandlingMiddleware(RequestDelegate next, ILogge
             LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
             await WriteErrorAsync(context, StatusCodes.Status404NotFound, exception.ErrorCode, exception.Message);
         }
+        catch (SlotAlreadyBookedException exception)
+        {
+            // Checked before DomainException: a slot taken by someone else is a conflict (409), not a rule violation.
+            LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
+            await WriteErrorAsync(context, StatusCodes.Status409Conflict, exception.ErrorCode, exception.Message);
+        }
         catch (DomainException exception)
         {
             LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
