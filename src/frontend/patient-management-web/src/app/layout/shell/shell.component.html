@@ -1,0 +1,23 @@
+<mat-toolbar color="primary" class="toolbar">
+  <span>{{ 'app.title' | translate }}</span>
+</mat-toolbar>
+
+<mat-sidenav-container class="container">
+  <mat-sidenav mode="side" opened class="sidenav">
+    <nav [attr.aria-label]="'nav.main' | translate">
+      <mat-nav-list>
+        @for (item of navigationItems; track item.path) {
+          <a mat-list-item [routerLink]="item.path" routerLinkActive="active-link">
+            {{ item.labelKey | translate }}
+          </a>
+        }
+      </mat-nav-list>
+    </nav>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <main class="content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
