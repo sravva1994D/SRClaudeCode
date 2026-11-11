@@ -13,5 +13,13 @@ export const PATIENTS_ROUTES: Routes = [
       ),
   },
   { path: 'new', loadComponent: patientFormRoute },
+  {
+    path: ':patientId',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./pages/patient-profile-page.component').then(
+        (module) => module.PatientProfilePageComponent,
+      ),
+  },
   { path: ':patientId/edit', loadComponent: patientFormRoute },
 ];

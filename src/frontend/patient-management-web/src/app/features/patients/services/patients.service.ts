@@ -32,6 +32,16 @@ export class PatientsService {
     return this.http.get<PagedResponse<PatientListItem>>(this.url, { params });
   }
 
+  /** The patients the signed-in user opened most recently, newest first. */
+  recent(): Observable<PatientListItem[]> {
+    return this.http.get<PatientListItem[]>(`${this.url}/recent`);
+  }
+
+  /** Records that the signed-in user opened this patient's profile. */
+  markViewed(patientId: number): Observable<void> {
+    return this.http.post<void>(`${this.url}/${patientId}/viewed`, null);
+  }
+
   get(patientId: number): Observable<Patient> {
     return this.http.get<Patient>(`${this.url}/${patientId}`);
   }
