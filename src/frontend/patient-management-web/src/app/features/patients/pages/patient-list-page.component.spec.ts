@@ -50,6 +50,7 @@ describe('PatientListPageComponent', () => {
             create: vi.fn(),
             update: vi.fn(),
             findDuplicates: vi.fn(),
+            recent: vi.fn(() => of([])),
           },
         },
       ],
@@ -74,6 +75,36 @@ describe('PatientListPageComponent', () => {
     vi.advanceTimersByTime(DEBOUNCE_WAIT_MS);
 
     expect(list).toHaveBeenLastCalledWith({ search: 'asha', page: 1, pageSize: 20 });
+  });
+
+  it('shows the recently opened patients while the search is empty', () => {
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    list.mockReturnValue(of(ONE_PATIENT_PAGE));
+    TestBed.configureTestingModule({
+      imports: [PatientListPageComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: PatientsService,
+          useValue: {
+            list,
+            recent: vi.fn(() => of([ASHA])),
+            get: vi.fn(),
+            create: vi.fn(),
+            update: vi.fn(),
+            findDuplicates: vi.fn(),
+          },
+        },
+      ],
+    });
+    fixture = TestBed.createComponent(PatientListPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.recent')).not.toBeNull();
   });
 
   it('shows the empty message when no patient matches', () => {

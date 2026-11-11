@@ -1,0 +1,48 @@
+<section class="patient-profile">
+  @if (loading()) {
+    <mat-progress-bar
+      mode="indeterminate"
+      [attr.aria-label]="'patients.loading' | translate"
+    ></mat-progress-bar>
+  } @else if (loadFailed()) {
+    <p class="error" role="alert">{{ 'patients.profileFailed' | translate }}</p>
+  } @else {
+    @if (patient(); as patient) {
+      <header class="heading">
+        <h1>{{ patient.fullName }}</h1>
+        <a
+          mat-flat-button
+          color="primary"
+          [routerLink]="['/patients', patient.patientId, 'edit']"
+          >{{ 'patients.edit' | translate }}</a
+        >
+      </header>
+
+      <dl class="details">
+        <dt>{{ 'patients.dateOfBirth' | translate }}</dt>
+        <dd>{{ patient.dateOfBirth | date: 'mediumDate' }}</dd>
+
+        <dt>{{ 'patients.age' | translate }}</dt>
+        <dd>{{ patient.dateOfBirth | age }}</dd>
+
+        <dt>{{ 'patients.gender' | translate }}</dt>
+        <dd>{{ genderLabelKey(patient.genderId) | translate }}</dd>
+
+        <dt>{{ 'patients.phoneNumber' | translate }}</dt>
+        <dd>{{ patient.phoneNumber ?? '—' }}</dd>
+
+        <dt>{{ 'patients.address' | translate }}</dt>
+        <dd>{{ patient.address ?? '—' }}</dd>
+      </dl>
+
+      <section class="visits" aria-labelledby="visits-heading">
+        <h2 id="visits-heading">{{ 'patients.visitsTitle' | translate }}</h2>
+        <p>{{ 'patients.visitsPlaceholder' | translate }}</p>
+      </section>
+
+      <p class="back">
+        <a routerLink="/patients">{{ 'patients.backToList' | translate }}</a>
+      </p>
+    }
+  }
+</section>

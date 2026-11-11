@@ -7,7 +7,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -73,6 +73,8 @@ export class PatientListPageComponent implements OnInit {
   readonly loading = signal(false);
   readonly loadFailed = signal(false);
   readonly page = signal<PagedResponse<PatientListItem> | null>(null);
+  readonly recent = signal<PatientListItem[]>([]);
+  readonly searchText = toSignal(this.searchControl.valueChanges, { initialValue: '' });
 
   private readonly query = new BehaviorSubject<PatientListQuery>({
     search: '',
@@ -81,6 +83,11 @@ export class PatientListPageComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.patients
+      .recent()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (items) => this.recent.set(items), error: () => this.recent.set([]) });
+
     this.searchControl.valueChanges
       .pipe(
         debounceTime(SEARCH_DEBOUNCE_MS),

@@ -12,6 +12,20 @@
     <mat-hint>{{ 'patients.searchHint' | translate }}</mat-hint>
   </mat-form-field>
 
+  @if (!searchText() && recent().length > 0) {
+    <section class="recent" aria-labelledby="recent-heading">
+      <h2 id="recent-heading">{{ 'patients.recentTitle' | translate }}</h2>
+      <ul class="rows">
+        @for (item of recent(); track item.patientId) {
+          <li class="row">
+            <a [routerLink]="['/patients', item.patientId]">{{ item.fullName }}</a>
+            <span class="phone">{{ item.phoneNumber ?? '' }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
   @if (loading()) {
     <mat-progress-bar
       mode="indeterminate"
@@ -31,7 +45,7 @@
         @for (item of result.items; track item.patientId) {
           <li class="row">
             <div class="identity">
-              <a [routerLink]="['/patients', item.patientId, 'edit']">{{ item.fullName }}</a>
+              <a [routerLink]="['/patients', item.patientId]">{{ item.fullName }}</a>
               <span class="meta">
                 {{ item.dateOfBirth | date: 'mediumDate' }}, {{ item.dateOfBirth | age }}
                 {{ 'patients.years' | translate }},

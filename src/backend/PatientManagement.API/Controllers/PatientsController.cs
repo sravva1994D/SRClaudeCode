@@ -23,8 +23,28 @@ public sealed class PatientsController(
     IValidator<FindDuplicatePatientsQuery> duplicateQueryValidator,
     SearchPatientsQueryHandler searchPatients,
     IValidator<SearchPatientsQuery> searchValidator,
+    ListRecentPatientsQueryHandler listRecent,
+    RecordPatientViewedCommandHandler recordViewed,
     ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>Returns the patients the signed-in user opened most recently, newest first.</summary>
+    [HttpGet("recent")]
+    [ProducesResponseType<IReadOnlyList<PatientListItem>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IReadOnlyList<PatientListItem>>> Recent(CancellationToken cancellationToken) =>
+        Ok(await listRecent.HandleAsync(new ListRecentPatientsQuery(currentUser.UserId), cancellationToken));
+
+    /// <summary>Records that the signed-in user opened this patient, so it appears in their recent list.</summary>
+    [HttpPost("{patientId:int}/viewed")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RecordViewed(int patientId, CancellationToken cancellationToken)
+    {
+        await recordViewed.HandleAsync(new RecordPatientViewedCommand(patientId, currentUser.UserId), cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>
     /// Returns one page of active patients. The search text matches names when it contains letters, and phone numbers
     /// when it contains only digits and phone symbols.

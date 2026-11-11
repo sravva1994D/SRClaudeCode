@@ -16,4 +16,13 @@ public interface IPatientSearch
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns the user's most recently opened active patients, newest first. A patient deactivated after being opened
+    /// is left out.
+    /// </summary>
+    Task<IReadOnlyList<PatientListItem>> ListRecentAsync(
+        int userId,
+        int limit,
+        CancellationToken cancellationToken);
 }
