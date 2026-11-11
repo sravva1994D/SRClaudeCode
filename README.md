@@ -44,6 +44,29 @@ dotnet run --project src/backend/tools/PatientManagement.Seeder
 
 The password is read from the environment and never stored. Set `PM_CONNECTION_STRING` to seed a different database. Never point the seeder at a database that holds real patients.
 
+### Resetting the doctor's password (operator)
+
+The web app has no reset screen. An operator with database access runs:
+
+```
+$env:PM_RESET_PASSWORD = '<the new password>'
+dotnet run --project src/backend/tools/PatientManagement.Seeder -- reset-password dev.doctor
+```
+
+This ends every session of that account and writes an audit row. The new password is read from the environment and never stored.
+
+### Sign-in setup
+
+The API needs an RSA signing key for access tokens. Create it once, then store it in user secrets (never in the repository):
+
+```
+openssl genrsa -out signing-key.pem 2048
+dotnet user-secrets set "Auth:SigningKeyPem" (Get-Content -Raw signing-key.pem) --project src/backend/PatientManagement.API
+Remove-Item signing-key.pem
+```
+
+The API refuses to start without the key. Access tokens last 15 minutes. The refresh cookie lasts 8 hours and ends after 30 minutes without use.
+
 ### Frontend
 
 From `src/frontend/patient-management-web`:
@@ -63,7 +86,7 @@ From `src/frontend/patient-management-web`:
 
 ### Configuration
 
-Development settings are in `appsettings.Development.json` (LocalDB, Windows authentication, migrations on startup). Nothing secret is stored in the repository. The JWT signing key and any credentials go in user secrets (added in Sprint 2).
+Development settings are in `appsettings.Development.json` (LocalDB, Windows authentication, migrations on startup, and the Angular dev origin for CORS). Nothing secret is stored in the repository. The JWT signing key goes in user secrets (see Sign-in setup).
 
 ## Data
 

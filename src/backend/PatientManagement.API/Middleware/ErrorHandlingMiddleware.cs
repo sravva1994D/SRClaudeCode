@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using PatientManagement.API.Errors;
@@ -15,11 +16,30 @@ public sealed partial class ErrorHandlingMiddleware(RequestDelegate next, ILogge
     public const string UnexpectedErrorMessage =
         "An unexpected error occurred. Quote the correlation id when you report it.";
 
+    public const string ValidationFailedCode = "validation_failed";
+    public const string ValidationFailedMessage = "One or more fields are invalid.";
+
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
             await next(context);
+        }
+        catch (ValidationException)
+        {
+            // Field names and values are not echoed: they can contain patient or credential data.
+            LogRejectedRequest(logger, ValidationFailedCode, CorrelationIdOf(context));
+            await WriteErrorAsync(context, StatusCodes.Status400BadRequest, ValidationFailedCode, ValidationFailedMessage);
+        }
+        catch (AuthenticationFailedException exception)
+        {
+            LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
+            await WriteErrorAsync(context, StatusCodes.Status401Unauthorized, exception.ErrorCode, exception.Message);
+        }
+        catch (ConcurrencyConflictException exception)
+        {
+            LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
+            await WriteErrorAsync(context, StatusCodes.Status409Conflict, exception.ErrorCode, exception.Message);
         }
         catch (DomainException exception)
         {
@@ -45,7 +65,7 @@ public sealed partial class ErrorHandlingMiddleware(RequestDelegate next, ILogge
             context.RequestAborted);
     }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Request {CorrelationId} rejected with business rule {ErrorCode}")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Request {CorrelationId} rejected: {ErrorCode}")]
     private static partial void LogRejectedRequest(ILogger logger, string errorCode, string correlationId);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Request {CorrelationId} failed ({ExceptionType}). Stack: {StackTrace}")]
