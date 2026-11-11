@@ -8,5 +8,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ['src/test-setup.ts'],
     include: ['src/**/*.spec.ts'],
+    server: {
+      deps: {
+        inline: [/@angular/, /@analogjs/],
+      },
+    },
   },
 });
