@@ -26,7 +26,7 @@ public sealed class SyntheticDataSeederTests
         await using var database = await TestDatabase.CreateAsync();
         await TestMigrations.ApplyAllAsync(database);
 
-        await SeedAsync(database, PasswordHasher.Hash("Passw0rd!"));
+        await SeedAsync(database, new BcryptPasswordHasher().Hash("Passw0rd!"));
 
         (await SqlQuery.ScalarIntAsync(database.ConnectionString, CountDoctorSql)).Should().Be(1);
     }
@@ -36,7 +36,7 @@ public sealed class SyntheticDataSeederTests
     {
         await using var database = await TestDatabase.CreateAsync();
         await TestMigrations.ApplyAllAsync(database);
-        var hash = PasswordHasher.Hash("Passw0rd!");
+        var hash = new BcryptPasswordHasher().Hash("Passw0rd!");
 
         await SeedAsync(database, hash);
         await SeedAsync(database, hash);
@@ -49,11 +49,11 @@ public sealed class SyntheticDataSeederTests
     {
         await using var database = await TestDatabase.CreateAsync();
         await TestMigrations.ApplyAllAsync(database);
-        await SeedAsync(database, PasswordHasher.Hash("Passw0rd!"));
+        await SeedAsync(database, new BcryptPasswordHasher().Hash("Passw0rd!"));
 
         var storedHash = await SqlQuery.ScalarStringAsync(database.ConnectionString, DoctorPasswordHashSql);
 
-        PasswordHasher.Verify("Passw0rd!", storedHash).Should().BeTrue();
+        new BcryptPasswordHasher().Verify("Passw0rd!", storedHash).Should().BeTrue();
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class SyntheticDataSeederTests
         await using var database = await TestDatabase.CreateAsync();
         await TestMigrations.ApplyAllAsync(database);
 
-        await SeedAsync(database, PasswordHasher.Hash("Passw0rd!"));
+        await SeedAsync(database, new BcryptPasswordHasher().Hash("Passw0rd!"));
 
         (await SqlQuery.ScalarStringAsync(database.ConnectionString, ClinicNameSql)).Should().Be("Synthetic Clinic");
     }
@@ -74,7 +74,7 @@ public sealed class SyntheticDataSeederTests
         await TestMigrations.ApplyAllAsync(database);
         await SqlQuery.ExecuteAsync(database.ConnectionString, SetClinicNameSql);
 
-        await SeedAsync(database, PasswordHasher.Hash("Passw0rd!"));
+        await SeedAsync(database, new BcryptPasswordHasher().Hash("Passw0rd!"));
 
         (await SqlQuery.ScalarStringAsync(database.ConnectionString, ClinicNameSql)).Should().Be("Doctor Entered Name");
     }

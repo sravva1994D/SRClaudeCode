@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
 using PatientManagement.API.Errors;
 using PatientManagement.API.IntegrationTests.Support;
 
@@ -118,12 +115,5 @@ public sealed class ErrorHandlingAndHealthTests(WebApplicationFactory<Program> f
     }
 
     private HttpClient CreateClient(string environment, string connectionString) =>
-        factory.WithWebHostBuilder(builder =>
-        {
-            builder.UseEnvironment(environment);
-            builder.UseSetting("Database:ConnectionString", connectionString);
-            builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
-            builder.ConfigureTestServices(services =>
-                services.AddControllers().AddApplicationPart(typeof(TestFailuresController).Assembly));
-        }).CreateClient();
+        TestHost.With(factory, environment, connectionString).CreateClient();
 }

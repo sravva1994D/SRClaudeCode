@@ -1,0 +1,42 @@
+<main class="login">
+  <h1>{{ 'login.title' | translate }}</h1>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'login.username' | translate }}</mat-label>
+      <input matInput formControlName="username" autocomplete="username" required />
+      @if (form.controls.username.touched && form.controls.username.hasError('required')) {
+        <mat-error>{{ 'validation.required' | translate }}</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'login.password' | translate }}</mat-label>
+      <input
+        matInput
+        type="password"
+        formControlName="password"
+        autocomplete="current-password"
+        required
+      />
+      @if (form.controls.password.touched && form.controls.password.hasError('required')) {
+        <mat-error>{{ 'validation.required' | translate }}</mat-error>
+      }
+    </mat-form-field>
+
+    @if (saving()) {
+      <mat-progress-bar
+        mode="indeterminate"
+        [attr.aria-label]="'login.signingIn' | translate"
+      ></mat-progress-bar>
+    }
+
+    @if (errorMessage(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+
+    <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
+      {{ 'login.submit' | translate }}
+    </button>
+  </form>
+</main>

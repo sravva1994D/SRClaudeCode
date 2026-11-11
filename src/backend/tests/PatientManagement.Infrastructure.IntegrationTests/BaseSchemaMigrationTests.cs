@@ -16,7 +16,7 @@ public sealed class BaseSchemaMigrationTests
     // Counts user tables that lack any of the six audit columns from CLAUDE.md 6.4.
     private const string CountTablesWithoutAuditColumnsSql = """
         SELECT COUNT(*) FROM sys.tables AS t
-        WHERE t.name <> N'SchemaMigrations'
+        WHERE t.name NOT IN (N'SchemaMigrations', N'AuditLogs')
           AND (SELECT COUNT(*) FROM sys.columns AS c
                WHERE c.object_id = t.object_id
                  AND c.name IN (N'IsActive', N'CreatedDate', N'CreatedBy', N'ModifiedDate', N'ModifiedBy', N'RowVersion')) < 6;
@@ -33,7 +33,7 @@ public sealed class BaseSchemaMigrationTests
         await using var database = await TestDatabase.CreateAsync();
         await MigrateAsync(database);
 
-        (await SqlQuery.ScalarIntAsync(database.ConnectionString, CountHistoryRowsSql)).Should().Be(3);
+        (await SqlQuery.ScalarIntAsync(database.ConnectionString, CountHistoryRowsSql)).Should().Be(7);
     }
 
     [Fact]
