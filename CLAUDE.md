@@ -655,7 +655,7 @@ These come from the Decisions Log and the implementation plan. Resolve them befo
 
 | Item | Needed by | Source |
 |------|-----------|--------|
-| Angular 19 support status check and version decision | Sprint 1 | Plan risk K3 |
+| Angular 19 support status check and version decision | Sprint 1 | Plan risk K3. Decided 2026-11-11: advisories accepted until the M1 review, upgrade before release (see `documents/risk-decisions.md`, R1) |
 | Full-text search feasibility on LocalDB | Sprint 1 | Plan risk K2; Q5 |
 | Bcrypt work factor on development hardware | Sprint 1 | Section 10.2 |
 | Test frameworks confirmed (Vitest, xUnit, NSubstitute) | Sprint 1 | Sections 9.2, 9.3 |
