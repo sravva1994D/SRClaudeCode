@@ -65,13 +65,19 @@ public sealed class Appointment
 
     /// <summary>
     /// Moves a scheduled appointment to a new future slot. Only scheduled appointments can move; a completed, cancelled
-    /// or no-show appointment is final. The same slot rules as booking apply.
+    /// or no-show appointment is final. Once the slot has started, its date and time are locked (plan Sprint 5–6, item 28),
+    /// so a past appointment cannot be moved, even to a future time. The same slot rules as booking apply.
     /// </summary>
     public void Reschedule(DateTime newSlotStartUtc, DateTime nowUtc)
     {
         if (StatusId != AppointmentStatuses.Scheduled)
         {
             throw new DomainException("appointment_not_reschedulable", "Only a scheduled appointment can be moved.");
+        }
+
+        if (SlotStartUtc <= nowUtc)
+        {
+            throw new DomainException("appointment_time_locked", "This appointment's time has passed and can no longer be moved.");
         }
 
         EnsureOnQuarterHour(newSlotStartUtc);
