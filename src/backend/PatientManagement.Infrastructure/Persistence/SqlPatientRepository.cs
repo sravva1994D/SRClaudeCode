@@ -19,7 +19,8 @@ public sealed class SqlPatientRepository(
     private const string TableName = "Patients";
 
     private const string FindActiveSql = """
-        SELECT PatientId, FullName, DateOfBirth, GenderId, PhoneNumber, Address, IsActive, RowVersion
+        SELECT PatientId, FullName, DateOfBirth, GenderId, PhoneNumber, Address, IsActive, RowVersion,
+               BloodGroupId, ChronicConditions
         FROM dbo.Patients
         WHERE PatientId = @PatientId AND IsActive = 1;
         """;
@@ -27,7 +28,8 @@ public sealed class SqlPatientRepository(
     // Name equality relies on the database's case-insensitive collation, which the development database uses.
     // The name is trimmed on write, so comparing without trimming here is correct.
     private const string FindDuplicatesSql = """
-        SELECT TOP (@MaximumCount) PatientId, FullName, DateOfBirth, GenderId, PhoneNumber, Address, IsActive, RowVersion
+        SELECT TOP (@MaximumCount) PatientId, FullName, DateOfBirth, GenderId, PhoneNumber, Address, IsActive, RowVersion,
+               BloodGroupId, ChronicConditions
         FROM dbo.Patients
         WHERE IsActive = 1
           AND DateOfBirth = @DateOfBirth
@@ -38,9 +40,11 @@ public sealed class SqlPatientRepository(
 
     // OUTPUT returns the new id and row version, so no second round trip is needed.
     private const string InsertSql = """
-        INSERT INTO dbo.Patients (FullName, DateOfBirth, GenderId, PhoneNumber, Address, CreatedBy, ModifiedDate, ModifiedBy)
+        INSERT INTO dbo.Patients (FullName, DateOfBirth, GenderId, PhoneNumber, Address, BloodGroupId, ChronicConditions,
+                                  CreatedBy, ModifiedDate, ModifiedBy)
         OUTPUT inserted.PatientId, inserted.RowVersion
-        VALUES (@FullName, @DateOfBirth, @GenderId, @PhoneNumber, @Address, @ChangedBy, @ModifiedDate, @ChangedBy);
+        VALUES (@FullName, @DateOfBirth, @GenderId, @PhoneNumber, @Address, @BloodGroupId, @ChronicConditions,
+                @ChangedBy, @ModifiedDate, @ChangedBy);
         """;
 
     // A deactivated patient is updated with IsActive = 0, so the write path does not need its own statement.
@@ -52,6 +56,8 @@ public sealed class SqlPatientRepository(
             GenderId = @GenderId,
             PhoneNumber = @PhoneNumber,
             Address = @Address,
+            BloodGroupId = @BloodGroupId,
+            ChronicConditions = @ChronicConditions,
             IsActive = @IsActive,
             ModifiedDate = @ModifiedDate,
             ModifiedBy = @ChangedBy
@@ -193,7 +199,9 @@ public sealed class SqlPatientRepository(
         NullableString(reader, 4),
         NullableString(reader, 5),
         reader.GetBoolean(6),
-        (byte[])reader.GetValue(7));
+        (byte[])reader.GetValue(7),
+        reader.IsDBNull(8) ? null : reader.GetInt32(8),
+        NullableString(reader, 9));
 
     private static void AddFieldParameters(DbCommand command, Patient patient)
     {
@@ -202,6 +210,8 @@ public sealed class SqlPatientRepository(
         command.Parameters.Add(new SqlParameter("@GenderId", patient.GenderId));
         command.Parameters.Add(Nullable("@PhoneNumber", patient.PhoneNumber));
         command.Parameters.Add(Nullable("@Address", patient.Address));
+        command.Parameters.Add(new SqlParameter("@BloodGroupId", SqlDbType.Int) { Value = (object?)patient.BloodGroupId ?? DBNull.Value });
+        command.Parameters.Add(Nullable("@ChronicConditions", patient.ChronicConditions));
     }
 
     private DbCommand CreateCommand(UnitOfWorkScope scope, string sql)

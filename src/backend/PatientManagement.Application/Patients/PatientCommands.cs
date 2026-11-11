@@ -8,7 +8,9 @@ public sealed record PatientFields(
     DateOnly DateOfBirth,
     int GenderId,
     string? PhoneNumber,
-    string? Address);
+    string? Address,
+    int? BloodGroupId = null,
+    string? ChronicConditions = null);
 
 public sealed record CreatePatientCommand(PatientFields Fields, int ChangedByUserId);
 
@@ -23,7 +25,9 @@ public sealed record PatientDetails(
     DateOnly DateOfBirth,
     int GenderId,
     string? PhoneNumber,
-    string? Address)
+    string? Address,
+    int? BloodGroupId,
+    string? ChronicConditions)
 {
     public static PatientDetails From(Patient patient) => new(
         patient.PatientId,
@@ -31,5 +35,7 @@ public sealed record PatientDetails(
         patient.DateOfBirth,
         patient.GenderId,
         patient.PhoneNumber,
-        patient.Address);
+        patient.Address,
+        patient.BloodGroupId,
+        patient.ChronicConditions);
 }

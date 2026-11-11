@@ -52,7 +52,9 @@ public sealed class CreatePatientCommandHandler(
                 fields.GenderId,
                 fields.PhoneNumber,
                 fields.Address,
-                Today(clock));
+                Today(clock),
+                fields.BloodGroupId,
+                fields.ChronicConditions);
 
             await patients.AddAsync(patient, command.ChangedByUserId, token);
             return PatientDetails.From(patient);
@@ -81,7 +83,9 @@ public sealed class UpdatePatientCommandHandler(
                 fields.GenderId,
                 fields.PhoneNumber,
                 fields.Address,
-                DateOnly.FromDateTime(clock.UtcNow));
+                DateOnly.FromDateTime(clock.UtcNow),
+                fields.BloodGroupId,
+                fields.ChronicConditions);
 
             await patients.SaveAsync(patient, auditValuesBefore, AuditAction.Update, command.ChangedByUserId, token);
             return PatientDetails.From(patient);
@@ -114,6 +118,7 @@ public static class PatientFieldNormalizer
         FullName = fields.FullName.Trim(),
         PhoneNumber = Digits(fields.PhoneNumber),
         Address = Blank(fields.Address),
+        ChronicConditions = Blank(fields.ChronicConditions),
     };
 
     private static string? Blank(string? value) =>

@@ -13,7 +13,9 @@ public sealed class Patient
         string? phoneNumber,
         string? address,
         bool isActive,
-        byte[] rowVersion)
+        byte[] rowVersion,
+        int? bloodGroupId,
+        string? chronicConditions)
     {
         PatientId = patientId;
         FullName = fullName;
@@ -23,6 +25,8 @@ public sealed class Patient
         Address = address;
         IsActive = isActive;
         RowVersion = rowVersion;
+        BloodGroupId = bloodGroupId;
+        ChronicConditions = chronicConditions;
     }
 
     public int PatientId { get; private set; }
@@ -42,6 +46,12 @@ public sealed class Patient
 
     public byte[] RowVersion { get; private set; }
 
+    /// <summary>Blood group from the seeded BloodGroups table (Q3). Null when not recorded.</summary>
+    public int? BloodGroupId { get; private set; }
+
+    /// <summary>Free text in Phase 1 (Q3). Null when not recorded.</summary>
+    public string? ChronicConditions { get; private set; }
+
     /// <summary>Creates a patient that has not been saved yet. The repository assigns the id on insert.</summary>
     public static Patient Register(
         string fullName,
@@ -49,10 +59,22 @@ public sealed class Patient
         int genderId,
         string? phoneNumber,
         string? address,
-        DateOnly today)
+        DateOnly today,
+        int? bloodGroupId = null,
+        string? chronicConditions = null)
     {
         EnsureDateOfBirthIsNotInFuture(dateOfBirth, today);
-        return new Patient(0, fullName, dateOfBirth, genderId, phoneNumber, address, isActive: true, Array.Empty<byte>());
+        return new Patient(
+            0,
+            fullName,
+            dateOfBirth,
+            genderId,
+            phoneNumber,
+            address,
+            isActive: true,
+            Array.Empty<byte>(),
+            bloodGroupId,
+            chronicConditions);
     }
 
     /// <summary>Rebuilds a patient from a stored row.</summary>
@@ -64,8 +86,10 @@ public sealed class Patient
         string? phoneNumber,
         string? address,
         bool isActive,
-        byte[] rowVersion) =>
-        new(patientId, fullName, dateOfBirth, genderId, phoneNumber, address, isActive, rowVersion);
+        byte[] rowVersion,
+        int? bloodGroupId = null,
+        string? chronicConditions = null) =>
+        new(patientId, fullName, dateOfBirth, genderId, phoneNumber, address, isActive, rowVersion, bloodGroupId, chronicConditions);
 
     public void Update(
         string fullName,
@@ -73,7 +97,9 @@ public sealed class Patient
         int genderId,
         string? phoneNumber,
         string? address,
-        DateOnly today)
+        DateOnly today,
+        int? bloodGroupId = null,
+        string? chronicConditions = null)
     {
         EnsureDateOfBirthIsNotInFuture(dateOfBirth, today);
         FullName = fullName;
@@ -81,6 +107,8 @@ public sealed class Patient
         GenderId = genderId;
         PhoneNumber = phoneNumber;
         Address = address;
+        BloodGroupId = bloodGroupId;
+        ChronicConditions = chronicConditions;
     }
 
     /// <summary>Hides the patient from every normal read. The row and its history stay in the database.</summary>
@@ -100,6 +128,8 @@ public sealed class Patient
         ["GenderId"] = GenderId,
         ["PhoneNumber"] = PhoneNumber,
         ["Address"] = Address,
+        ["BloodGroupId"] = BloodGroupId,
+        ["ChronicConditions"] = ChronicConditions,
         ["IsActive"] = IsActive,
     };
 

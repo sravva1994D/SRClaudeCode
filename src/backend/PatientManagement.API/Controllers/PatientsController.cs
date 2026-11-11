@@ -146,12 +146,16 @@ public sealed record PatientRequest(
     DateOnly? DateOfBirth,
     int? GenderId,
     string? PhoneNumber,
-    string? Address)
+    string? Address,
+    int? BloodGroupId = null,
+    string? ChronicConditions = null)
 {
     public PatientFields ToFields() => new(
         FullName ?? string.Empty,
         DateOfBirth ?? default,
         GenderId ?? 0,
         PhoneNumber,
-        Address);
+        Address,
+        BloodGroupId,
+        ChronicConditions);
 }
