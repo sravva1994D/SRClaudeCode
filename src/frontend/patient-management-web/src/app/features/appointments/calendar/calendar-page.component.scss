@@ -1,0 +1,109 @@
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grid-wrapper {
+  overflow-x: auto;
+}
+
+.grid {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 480px;
+
+  th,
+  td {
+    border: 1px solid currentColor;
+    padding: 4px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  td {
+    min-height: 44px;
+    height: 28px;
+  }
+
+  th[scope='row'] {
+    white-space: nowrap;
+    font-weight: 500;
+  }
+}
+
+.free {
+  width: 100%;
+  min-height: 44px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.booked {
+  font-weight: 600;
+}
+
+.past {
+  opacity: 0.6;
+}
+
+.booking {
+  border-top: 1px solid currentColor;
+  padding-top: 12px;
+  max-width: 480px;
+}
+
+.matches {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+
+  button {
+    min-height: 44px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.error {
+  padding: 8px 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

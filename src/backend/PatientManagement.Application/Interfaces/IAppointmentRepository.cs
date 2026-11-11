@@ -14,4 +14,13 @@ public interface IAppointmentRepository
     /// when another active appointment already holds the slot.
     /// </summary>
     Task AddAsync(Appointment appointment, int changedByUserId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns the active appointments whose slot starts in [fromUtc, toUtc), ordered by slot start, with the patient's
+    /// name. Read-only, so it runs outside a unit of work.
+    /// </summary>
+    Task<IReadOnlyList<Appointments.AppointmentListItem>> ListActiveBetweenAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken);
 }

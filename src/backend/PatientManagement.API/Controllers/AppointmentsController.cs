@@ -14,9 +14,30 @@ namespace PatientManagement.API.Controllers;
 public sealed class AppointmentsController(
     ScheduleAppointmentCommandHandler schedule,
     GetAppointmentQueryHandler getAppointment,
+    ListAppointmentsQueryHandler listAppointments,
     IValidator<ScheduleAppointmentCommand> scheduleValidator,
+    IValidator<ListAppointmentsQuery> listValidator,
     ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Returns the appointments whose slot starts in [from, to), for the calendar. Both times are UTC; a time without an
+    /// offset is read as UTC. The range can be at most 31 days.
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType<IReadOnlyList<AppointmentListItem>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IReadOnlyList<AppointmentListItem>>> List(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        CancellationToken cancellationToken)
+    {
+        var query = new ListAppointmentsQuery(AsUtc(from), AsUtc(to));
+        await listValidator.ValidateAndThrowAsync(query, cancellationToken);
+
+        return Ok(await listAppointments.HandleAsync(query, cancellationToken));
+    }
+
     /// <summary>Returns one active appointment.</summary>
     [HttpGet("{appointmentId:int}")]
     [ProducesResponseType<AppointmentDetails>(StatusCodes.Status200OK)]
@@ -45,6 +66,13 @@ public sealed class AppointmentsController(
 
         var booked = await schedule.HandleAsync(command, cancellationToken);
         return CreatedAtAction(nameof(Get), new { appointmentId = booked.AppointmentId }, booked);
+    }
+
+    /// <summary>A time without an offset is read as UTC, so the server never interprets it in local time.</summary>
+    private static DateTime AsUtc(DateTime? value)
+    {
+        var time = value ?? default;
+        return time.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(time, DateTimeKind.Utc) : time.ToUniversalTime();
     }
 }
 

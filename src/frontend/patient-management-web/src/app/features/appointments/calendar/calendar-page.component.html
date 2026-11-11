@@ -1,0 +1,133 @@
+<section class="calendar">
+  <header class="toolbar">
+    <h1>{{ 'nav.appointments' | translate }}</h1>
+    <div class="controls">
+      <button mat-button type="button" (click)="shift(-1)">
+        {{ 'appointments.previous' | translate }}
+      </button>
+      <button mat-button type="button" (click)="goToToday()">
+        {{ 'appointments.today' | translate }}
+      </button>
+      <button mat-button type="button" (click)="shift(1)">
+        {{ 'appointments.next' | translate }}
+      </button>
+      <button
+        mat-stroked-button
+        type="button"
+        [attr.aria-pressed]="view() === 'day'"
+        (click)="setView('day')"
+      >
+        {{ 'appointments.day' | translate }}
+      </button>
+      <button
+        mat-stroked-button
+        type="button"
+        [attr.aria-pressed]="view() === 'week'"
+        (click)="setView('week')"
+      >
+        {{ 'appointments.week' | translate }}
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <mat-progress-bar
+      mode="indeterminate"
+      [attr.aria-label]="'appointments.loading' | translate"
+    ></mat-progress-bar>
+  }
+
+  @if (loadFailed()) {
+    <p class="error" role="alert">{{ 'appointments.loadFailed' | translate }}</p>
+  }
+
+  <div class="grid-wrapper">
+    <table class="grid">
+      <caption class="visually-hidden">
+        {{
+          'nav.appointments' | translate
+        }}
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ 'appointments.time' | translate }}</th>
+          @for (day of days(); track day.getTime()) {
+            <th scope="col">{{ day | date: 'EEE d MMM' }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (slot of timeSlots(); track slot.getTime()) {
+          <tr>
+            <th scope="row">{{ slot | date: 'shortTime' }}</th>
+            @for (day of days(); track day.getTime()) {
+              <td>
+                @if (bookedAt(day, slot); as item) {
+                  <span class="booked">{{ item.patientFullName }}</span>
+                } @else if (isBookable(day, slot)) {
+                  <button
+                    type="button"
+                    class="free"
+                    (click)="selectSlot(day, slot)"
+                    [attr.aria-label]="'appointments.bookSlot' | translate"
+                  >
+                    {{ 'appointments.free' | translate }}
+                  </button>
+                } @else {
+                  <span class="past">{{ 'appointments.past' | translate }}</span>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (selectedSlot(); as slot) {
+    <section class="booking" aria-labelledby="booking-heading">
+      <h2 id="booking-heading">{{ 'appointments.bookTitle' | translate }}</h2>
+      <p>
+        {{ 'appointments.selectedSlot' | translate }}
+        {{ slot | date: 'EEE d MMM, shortTime' }}
+      </p>
+
+      @if (chosenPatient(); as patient) {
+        <p>
+          {{ 'appointments.patient' | translate }}: <strong>{{ patient.fullName }}</strong>
+        </p>
+      } @else {
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'appointments.findPatient' | translate }}</mat-label>
+          <input matInput [formControl]="patientSearch" autocomplete="off" />
+        </mat-form-field>
+        <ul class="matches">
+          @for (match of patientMatches(); track match.patientId) {
+            <li>
+              <button type="button" (click)="choosePatient(match)">{{ match.fullName }}</button>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (bookError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+
+      <div class="actions">
+        <button mat-button type="button" (click)="cancelBooking()">
+          {{ 'appointments.cancel' | translate }}
+        </button>
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          [disabled]="!chosenPatient() || booking()"
+          (click)="confirmBooking()"
+        >
+          {{ 'appointments.book' | translate }}
+        </button>
+      </div>
+    </section>
+  }
+</section>
