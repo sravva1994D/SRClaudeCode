@@ -101,6 +101,25 @@ public sealed class AuthEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task ChangePassword_WeakNewPassword_Returns400()
+    {
+        await using var database = await TemporaryDatabase.CreateAsync();
+        using var client = await StartAsync(database);
+        var loginResponse = await Login(client, Username, Password);
+        var accessToken = (await loginResponse.Content.ReadFromJsonAsync<AccessTokenResponse>())!.AccessToken;
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, ChangePasswordPath)
+        {
+            Content = JsonContent.Create(new ChangePasswordRequest(Password, "weak")),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task ChangePassword_ValidRequest_Returns204AndEndsEverySession()
     {
         await using var database = await TemporaryDatabase.CreateAsync();
