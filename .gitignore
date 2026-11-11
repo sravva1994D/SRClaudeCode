@@ -1,0 +1,32 @@
+# Build output
+bin/
+obj/
+dist/
+.angular/
+node_modules/
+TestResults/
+coverage/
+
+# IDE
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+
+# Local and secret settings
+.claude/settings.local.json
+appsettings.*.local.json
+secrets.json
+.env
+*.pfx
+*.key
+
+# Database files (synthetic data is generated at runtime, never committed)
+*.mdf
+*.ldf
+*.bak
+*.dacpac
+
+# Not part of the product
+Reference/
