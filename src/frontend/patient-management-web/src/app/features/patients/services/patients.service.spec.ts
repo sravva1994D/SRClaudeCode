@@ -15,6 +15,8 @@ const REQUEST: PatientRequest = {
   genderId: 2,
   phoneNumber: '919876543210',
   address: null,
+  bloodGroupId: null,
+  chronicConditions: null,
 };
 
 describe('PatientsService', () => {

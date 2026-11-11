@@ -30,6 +30,7 @@ import {
 import { ApiRequestError } from '../../../core/http/api-request-error';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import {
+  PATIENT_BLOOD_GROUP_IDS,
   PATIENT_GENDER_OPTIONS,
   PatientRequest,
   PatientSummary,
@@ -48,6 +49,7 @@ import { PatientsService } from '../services/patients.service';
 
 const MAXIMUM_NAME_LENGTH = 200;
 const MAXIMUM_ADDRESS_LENGTH = 500;
+const MAXIMUM_CHRONIC_CONDITIONS_LENGTH = 1000;
 const DUPLICATE_CHECK_DEBOUNCE_MS = 400;
 
 interface DuplicateCriteria {
@@ -87,6 +89,7 @@ export class PatientFormPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly genderOptions = PATIENT_GENDER_OPTIONS;
+  readonly bloodGroupIds = PATIENT_BLOOD_GROUP_IDS;
   readonly today = toIsoDate(new Date());
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -109,6 +112,11 @@ export class PatientFormPageComponent implements OnInit {
     address: new FormControl('', {
       nonNullable: true,
       validators: [Validators.maxLength(MAXIMUM_ADDRESS_LENGTH)],
+    }),
+    bloodGroupId: new FormControl<number | null>(null),
+    chronicConditions: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(MAXIMUM_CHRONIC_CONDITIONS_LENGTH)],
     }),
   });
 
@@ -163,6 +171,8 @@ export class PatientFormPageComponent implements OnInit {
             genderId: patient.genderId,
             phoneNumber: patient.phoneNumber ?? '',
             address: patient.address ?? '',
+            bloodGroupId: patient.bloodGroupId,
+            chronicConditions: patient.chronicConditions ?? '',
           });
           this.loading.set(false);
         },
@@ -218,6 +228,8 @@ export class PatientFormPageComponent implements OnInit {
       genderId: raw.genderId ?? 0,
       phoneNumber: normalizePhoneNumber(raw.phoneNumber),
       address: raw.address.trim() === '' ? null : raw.address.trim(),
+      bloodGroupId: raw.bloodGroupId,
+      chronicConditions: raw.chronicConditions.trim() === '' ? null : raw.chronicConditions.trim(),
     };
   }
 }

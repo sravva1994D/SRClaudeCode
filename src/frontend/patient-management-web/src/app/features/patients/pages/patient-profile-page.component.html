@@ -33,6 +33,18 @@
 
         <dt>{{ 'patients.address' | translate }}</dt>
         <dd>{{ patient.address ?? '—' }}</dd>
+
+        <dt>{{ 'patients.bloodGroup' | translate }}</dt>
+        <dd>
+          {{
+            patient.bloodGroupId === null
+              ? ('patients.notRecorded' | translate)
+              : ('patients.bloodGroup.' + patient.bloodGroupId | translate)
+          }}
+        </dd>
+
+        <dt>{{ 'patients.chronicConditions' | translate }}</dt>
+        <dd>{{ patient.chronicConditions ?? ('patients.notRecorded' | translate) }}</dd>
       </dl>
 
       <section class="visits" aria-labelledby="visits-heading">
