@@ -1,10 +1,6 @@
 using FluentAssertions;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using PatientManagement.Infrastructure.IntegrationTests.Support;
-using PatientManagement.Infrastructure.Migrations;
-using PatientManagement.Infrastructure.Persistence;
 
 namespace PatientManagement.Infrastructure.IntegrationTests;
 
@@ -164,15 +160,5 @@ public sealed class BaseSchemaMigrationTests
     private static string InsertUserSql(string username) =>
         $"INSERT INTO dbo.Users (Username, PasswordHash) VALUES (N'{username}', N'hash');";
 
-    private static async Task MigrateAsync(TestDatabase database)
-    {
-        var scripts = EmbeddedMigrationScripts.Load(typeof(MigrationRunner).Assembly);
-        var options = Options.Create(new DatabaseOptions { ConnectionString = database.ConnectionString });
-        var runner = new MigrationRunner(
-            new SqlConnectionFactory(options),
-            options,
-            NullLogger<MigrationRunner>.Instance);
-
-        await runner.ApplyAsync(scripts, CancellationToken.None);
-    }
+    private static Task MigrateAsync(TestDatabase database) => TestMigrations.ApplyAllAsync(database);
 }
