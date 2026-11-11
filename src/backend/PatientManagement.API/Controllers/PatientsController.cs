@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PatientManagement.Application.Interfaces;
+using PatientManagement.Application.Paging;
 using PatientManagement.Application.Patients;
 using PatientManagement.Application.Patients.Handlers;
 
@@ -20,8 +21,29 @@ public sealed class PatientsController(
     IValidator<UpdatePatientCommand> updateValidator,
     FindDuplicatePatientsQueryHandler findDuplicates,
     IValidator<FindDuplicatePatientsQuery> duplicateQueryValidator,
+    SearchPatientsQueryHandler searchPatients,
+    IValidator<SearchPatientsQuery> searchValidator,
     ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Returns one page of active patients. The search text matches names when it contains letters, and phone numbers
+    /// when it contains only digits and phone symbols.
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType<PagedResponse<PatientListItem>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<PagedResponse<PatientListItem>>> List(
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PagingLimits.DefaultPageSize)
+    {
+        var query = new SearchPatientsQuery(search, page, pageSize);
+        await searchValidator.ValidateAndThrowAsync(query, HttpContext.RequestAborted);
+
+        return Ok(await searchPatients.HandleAsync(query, HttpContext.RequestAborted));
+    }
+
     /// <summary>
     /// Returns active patients with the same name and date of birth. Used by the patient form to warn before a
     /// duplicate is saved; the warning does not block the save.
