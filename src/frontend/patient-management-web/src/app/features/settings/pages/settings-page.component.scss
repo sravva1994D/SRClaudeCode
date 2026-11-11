@@ -1,0 +1,22 @@
+.settings {
+  box-sizing: border-box;
+  max-width: 640px;
+  padding: 24px 16px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

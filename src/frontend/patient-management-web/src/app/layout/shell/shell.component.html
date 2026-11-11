@@ -1,5 +1,7 @@
 <mat-toolbar color="primary" class="toolbar">
   <span>{{ 'app.title' | translate }}</span>
+  <span class="spacer"></span>
+  <button mat-button type="button" (click)="signOut()">{{ 'shell.signOut' | translate }}</button>
 </mat-toolbar>
 
 <mat-sidenav-container class="container">

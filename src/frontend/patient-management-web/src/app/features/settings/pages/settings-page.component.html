@@ -1,0 +1,85 @@
+<section class="settings">
+  <h1>{{ 'nav.settings' | translate }}</h1>
+
+  @if (loading()) {
+    <mat-progress-bar
+      mode="indeterminate"
+      [attr.aria-label]="'settings.loading' | translate"
+    ></mat-progress-bar>
+  } @else {
+    <h2>{{ 'settings.clinicTitle' | translate }}</h2>
+    <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'settings.clinicName' | translate }}</mat-label>
+        <input matInput formControlName="clinicName" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'settings.doctorName' | translate }}</mat-label>
+        <input matInput formControlName="doctorName" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'settings.qualifications' | translate }}</mat-label>
+        <input matInput formControlName="qualifications" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'settings.registrationNumber' | translate }}</mat-label>
+        <input matInput formControlName="registrationNumber" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'settings.address' | translate }}</mat-label>
+        <textarea matInput formControlName="address" rows="2"></textarea>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'settings.phoneNumber' | translate }}</mat-label>
+        <input matInput formControlName="phoneNumber" autocomplete="tel" />
+        @if (profileForm.controls.phoneNumber.hasError('pattern')) {
+          <mat-error>{{ 'settings.phoneInvalid' | translate }}</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'settings.footerNotes' | translate }}</mat-label>
+        <textarea matInput formControlName="footerNotes" rows="3"></textarea>
+      </mat-form-field>
+      <button
+        mat-flat-button
+        color="primary"
+        type="submit"
+        [disabled]="profileForm.invalid || savingProfile()"
+      >
+        {{ 'settings.save' | translate }}
+      </button>
+    </form>
+
+    <h2>{{ 'settings.passwordTitle' | translate }}</h2>
+    <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'settings.currentPassword' | translate }}</mat-label>
+        <input
+          matInput
+          type="password"
+          formControlName="currentPassword"
+          autocomplete="current-password"
+        />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'settings.newPassword' | translate }}</mat-label>
+        <input matInput type="password" formControlName="newPassword" autocomplete="new-password" />
+        @if (passwordForm.controls.newPassword.hasError('minlength')) {
+          <mat-error>{{ 'settings.passwordTooShort' | translate }}</mat-error>
+        }
+      </mat-form-field>
+      @if (passwordError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+      <p class="hint">{{ 'settings.passwordHint' | translate }}</p>
+      <button
+        mat-stroked-button
+        color="primary"
+        type="submit"
+        [disabled]="passwordForm.invalid || changingPassword()"
+      >
+        {{ 'settings.changePassword' | translate }}
+      </button>
+    </form>
+  }
+</section>

@@ -1,12 +1,21 @@
 import { Routes } from '@angular/router';
 
+import { authGuard } from './core/auth/auth.guard';
 import { ShellComponent } from './layout/shell/shell.component';
 
-/** Every route sits under the shell. Each feature is lazy-loaded from its own routes file (CLAUDE.md 8.5). */
+/**
+ * The sign-in page sits outside the shell. Everything else sits under the shell, behind the auth guard. Each feature
+ * is lazy-loaded from its own routes file (CLAUDE.md 8.5).
+ */
 export const routes: Routes = [
+  {
+    path: 'login',
+    loadChildren: () => import('./features/auth/auth.routes').then((module) => module.AUTH_ROUTES),
+  },
   {
     path: '',
     component: ShellComponent,
+    canActivate: [authGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
