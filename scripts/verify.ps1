@@ -28,8 +28,12 @@ Invoke-Gate 'Backend unit tests' {
 }
 
 if (-not $SkipIntegration) {
-    Invoke-Gate 'Backend integration tests (LocalDB)' {
+    # One gate per test project. Inside a single gate only the last command's exit code is seen, so a failure in an
+    # earlier project would be reported as a pass.
+    Invoke-Gate 'Backend infrastructure integration tests (LocalDB)' {
         dotnet test (Join-Path $repositoryRoot 'src/backend/tests/PatientManagement.Infrastructure.IntegrationTests') -c Release --no-build
+    }
+    Invoke-Gate 'Backend API integration tests (LocalDB)' {
         dotnet test (Join-Path $repositoryRoot 'src/backend/tests/PatientManagement.API.IntegrationTests') -c Release --no-build
     }
 }
