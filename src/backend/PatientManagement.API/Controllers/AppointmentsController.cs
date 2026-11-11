@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PatientManagement.Application.Appointments;
 using PatientManagement.Application.Appointments.Handlers;
 using PatientManagement.Application.Interfaces;
+using PatientManagement.Domain.Appointments;
 
 namespace PatientManagement.API.Controllers;
 
@@ -17,8 +18,69 @@ public sealed class AppointmentsController(
     ListAppointmentsQueryHandler listAppointments,
     IValidator<ScheduleAppointmentCommand> scheduleValidator,
     IValidator<ListAppointmentsQuery> listValidator,
+    RescheduleAppointmentCommandHandler reschedule,
+    ChangeAppointmentStatusCommandHandler changeStatus,
+    IValidator<RescheduleAppointmentCommand> rescheduleValidator,
     ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Moves a scheduled appointment to a new future slot. The slot rules are the same as for booking. A completed,
+    /// cancelled or no-show appointment returns 422.
+    /// </summary>
+    [HttpPut("{appointmentId:int}/reschedule")]
+    [ProducesResponseType<AppointmentDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<AppointmentDetails>> Reschedule(
+        int appointmentId,
+        [FromBody] RescheduleAppointmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = request.ToCommand(appointmentId, currentUser.UserId);
+        await rescheduleValidator.ValidateAndThrowAsync(command, cancellationToken);
+
+        return Ok(await reschedule.HandleAsync(command, cancellationToken));
+    }
+
+    /// <summary>Marks a scheduled appointment as completed.</summary>
+    [HttpPost("{appointmentId:int}/complete")]
+    [ProducesResponseType<AppointmentDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public Task<ActionResult<AppointmentDetails>> Complete(int appointmentId, CancellationToken cancellationToken) =>
+        ChangeStatus(appointmentId, AppointmentStatuses.Completed, cancellationToken);
+
+    /// <summary>Cancels a scheduled appointment. The slot becomes free for another booking.</summary>
+    [HttpPost("{appointmentId:int}/cancel")]
+    [ProducesResponseType<AppointmentDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public Task<ActionResult<AppointmentDetails>> Cancel(int appointmentId, CancellationToken cancellationToken) =>
+        ChangeStatus(appointmentId, AppointmentStatuses.Cancelled, cancellationToken);
+
+    /// <summary>Marks a scheduled appointment as no-show. The slot stays recorded against the patient.</summary>
+    [HttpPost("{appointmentId:int}/no-show")]
+    [ProducesResponseType<AppointmentDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public Task<ActionResult<AppointmentDetails>> NoShow(int appointmentId, CancellationToken cancellationToken) =>
+        ChangeStatus(appointmentId, AppointmentStatuses.NoShow, cancellationToken);
+
+    private async Task<ActionResult<AppointmentDetails>> ChangeStatus(
+        int appointmentId,
+        int targetStatusId,
+        CancellationToken cancellationToken)
+    {
+        var command = new ChangeAppointmentStatusCommand(appointmentId, targetStatusId, currentUser.UserId);
+        return Ok(await changeStatus.HandleAsync(command, cancellationToken));
+    }
+
     /// <summary>
     /// Returns the appointments whose slot starts in [from, to), for the calendar. Both times are UTC; a time without an
     /// offset is read as UTC. The range can be at most 31 days.
@@ -73,6 +135,19 @@ public sealed class AppointmentsController(
     {
         var time = value ?? default;
         return time.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(time, DateTimeKind.Utc) : time.ToUniversalTime();
+    }
+}
+
+/// <summary>Reschedule body. A missing slot fails validation with 400.</summary>
+public sealed record RescheduleAppointmentRequest(DateTime? SlotStart)
+{
+    public RescheduleAppointmentCommand ToCommand(int appointmentId, int changedByUserId)
+    {
+        var slot = SlotStart ?? default;
+        var slotUtc = slot.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(slot, DateTimeKind.Utc)
+            : slot.ToUniversalTime();
+        return new RescheduleAppointmentCommand(appointmentId, slotUtc, changedByUserId);
     }
 }
 

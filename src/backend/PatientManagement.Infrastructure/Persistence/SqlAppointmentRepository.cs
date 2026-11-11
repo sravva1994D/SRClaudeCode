@@ -22,6 +22,18 @@ public sealed class SqlAppointmentRepository(
     private const int DuplicateKeyErrorNumber = 2601;
     private const int UniqueConstraintErrorNumber = 2627;
 
+    // A row is saved only if it has not changed since it was read (RowVersion), so two users cannot overwrite each other.
+    // Moving to a slot held by another active appointment is rejected by the same filtered unique index as booking.
+    private const string UpdateSql = """
+        UPDATE dbo.Appointments
+        SET SlotStart = @SlotStart,
+            AppointmentStatusId = @StatusId,
+            ModifiedDate = @ModifiedDate,
+            ModifiedBy = @ChangedBy
+        OUTPUT inserted.RowVersion
+        WHERE AppointmentId = @AppointmentId AND RowVersion = @RowVersion AND IsActive = 1;
+        """;
+
     private const string FindActiveSql = """
         SELECT AppointmentId, PatientId, SlotStart, AppointmentStatusId, IsActive, RowVersion
         FROM dbo.Appointments
@@ -84,6 +96,48 @@ public sealed class SqlAppointmentRepository(
         }
 
         return items;
+    }
+
+    public async Task SaveAsync(
+        Appointment appointment,
+        IReadOnlyDictionary<string, object?> auditValuesBefore,
+        AuditAction action,
+        int changedByUserId,
+        CancellationToken cancellationToken)
+    {
+        var scope = UnitOfWorkScope.Current;
+        await using var command = scope.Connection.CreateCommand();
+        command.CommandText = UpdateSql;
+        command.CommandTimeout = options.Value.CommandTimeoutSeconds;
+        command.Transaction = scope.Transaction;
+        command.Parameters.Add(new SqlParameter("@SlotStart", DateTime.SpecifyKind(appointment.SlotStartUtc, DateTimeKind.Utc)));
+        command.Parameters.Add(new SqlParameter("@StatusId", appointment.StatusId));
+        command.Parameters.Add(new SqlParameter("@ModifiedDate", clock.UtcNow));
+        command.Parameters.Add(new SqlParameter("@ChangedBy", changedByUserId));
+        command.Parameters.Add(new SqlParameter("@AppointmentId", appointment.AppointmentId));
+        command.Parameters.Add(new SqlParameter("@RowVersion", appointment.RowVersion));
+
+        byte[]? newRowVersion;
+        try
+        {
+            newRowVersion = await command.ExecuteScalarAsync(cancellationToken) as byte[];
+        }
+        catch (SqlException exception) when (exception.Number is DuplicateKeyErrorNumber or UniqueConstraintErrorNumber)
+        {
+            throw new SlotAlreadyBookedException();
+        }
+
+        appointment.SetRowVersion(newRowVersion ?? throw new ConcurrencyConflictException(TableName));
+
+        await auditLogWriter.WriteAsync(
+            new AuditEntry(
+                TableName,
+                appointment.AppointmentId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                action,
+                auditValuesBefore,
+                appointment.AuditValues(),
+                changedByUserId),
+            cancellationToken);
     }
 
     public async Task AddAsync(Appointment appointment, int changedByUserId, CancellationToken cancellationToken)
