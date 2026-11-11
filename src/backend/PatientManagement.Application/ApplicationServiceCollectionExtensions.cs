@@ -31,6 +31,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IValidator<Patients.UpdatePatientCommand>, Validators.UpdatePatientCommandValidator>();
         services.AddScoped<Patients.Handlers.FindDuplicatePatientsQueryHandler>();
         services.AddScoped<IValidator<Patients.FindDuplicatePatientsQuery>, Validators.FindDuplicatePatientsQueryValidator>();
+
+        services.AddScoped<Patients.Handlers.SearchPatientsQueryHandler>();
+        services.AddScoped<IValidator<Patients.SearchPatientsQuery>, Validators.SearchPatientsQueryValidator>();
         return services;
     }
 }

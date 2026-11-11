@@ -45,6 +45,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IRefreshTokenRepository, SqlRefreshTokenRepository>();
         services.AddScoped<IClinicProfileRepository, SqlClinicProfileRepository>();
         services.AddScoped<IPatientRepository, SqlPatientRepository>();
+        services.AddScoped<IPatientSearch, SqlPatientSearch>();
 
         services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
         return services;
