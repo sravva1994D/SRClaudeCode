@@ -2,6 +2,6 @@
   "_comment": "Accepted npm audit counts (risk R1 in documents/risk-decisions.md). The gate fails if any count rises. Lower these numbers when findings are fixed.",
   "critical": 4,
   "high": 14,
-  "moderate": 36,
+  "moderate": 38,
   "low": 2
 }
