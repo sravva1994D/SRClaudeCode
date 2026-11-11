@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PatientManagement.Infrastructure.Health;
 using PatientManagement.Infrastructure.Migrations;
 using PatientManagement.Infrastructure.Persistence;
 
@@ -19,6 +20,7 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
         services.AddSingleton<MigrationRunner>();
+        services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
         return services;
     }
 }
