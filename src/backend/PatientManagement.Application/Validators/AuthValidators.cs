@@ -1,5 +1,6 @@
 using FluentValidation;
 using PatientManagement.Application.Auth;
+using PatientManagement.Domain.Security;
 
 namespace PatientManagement.Application.Validators;
 
@@ -21,9 +22,15 @@ public sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
     }
 }
 
-/// <summary>Format and length checks for changing the password. The policy itself is checked in the handler.</summary>
+/// <summary>
+/// Format, length and policy checks for changing the password. The handler repeats the policy check as a safety net.
+/// A weak new password is a request error (400), not a business-rule error, so it is checked here.
+/// </summary>
 public sealed class ChangePasswordCommandValidator : AbstractValidator<ChangePasswordCommand>
 {
+    public const string WeakNewPasswordMessage =
+        "The new password must be at least 8 characters and include upper case, lower case, a digit and a symbol.";
+
     public ChangePasswordCommandValidator()
     {
         RuleFor(command => command.CurrentPassword)
@@ -32,6 +39,8 @@ public sealed class ChangePasswordCommandValidator : AbstractValidator<ChangePas
 
         RuleFor(command => command.NewPassword)
             .NotEmpty()
-            .MaximumLength(LoginCommandValidator.MaximumPasswordLength);
+            .MaximumLength(LoginCommandValidator.MaximumPasswordLength)
+            .Must(password => string.IsNullOrEmpty(password) || PasswordPolicy.IsSatisfiedBy(password))
+            .WithMessage(WeakNewPasswordMessage);
     }
 }
