@@ -24,6 +24,23 @@ export interface PatientSummary {
   dateOfBirth: string;
 }
 
+/** A row in the patient list. */
+export interface PatientListItem {
+  patientId: number;
+  fullName: string;
+  dateOfBirth: string;
+  genderId: number;
+  phoneNumber: string | null;
+}
+
+/** One page of a list, in the shape every paged endpoint returns (CLAUDE.md 6.5). */
+export interface PagedResponse<T> {
+  items: T[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+}
+
 /** Gender choices. The ids match the seeded Genders table (migration V0002). */
 export const PATIENT_GENDER_OPTIONS = [
   { id: 1, labelKey: 'patients.gender.male' },

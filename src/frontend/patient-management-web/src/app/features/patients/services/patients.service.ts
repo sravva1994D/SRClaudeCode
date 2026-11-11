@@ -3,13 +3,34 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import { Patient, PatientRequest, PatientSummary } from '../../../core/models/patient.model';
+import {
+  PagedResponse,
+  Patient,
+  PatientListItem,
+  PatientRequest,
+  PatientSummary,
+} from '../../../core/models/patient.model';
+
+/** One page of the patient list. The search text matches names or phone digits (see the API). */
+export interface PatientListQuery {
+  search: string;
+  page: number;
+  pageSize: number;
+}
 
 /** Reads and saves patients. Errors reach callers already normalized by the HTTP interceptors. */
 @Injectable({ providedIn: 'root' })
 export class PatientsService {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiBaseUrl}/patients`;
+
+  list(query: PatientListQuery): Observable<PagedResponse<PatientListItem>> {
+    let params = new HttpParams().set('page', query.page).set('pageSize', query.pageSize);
+    if (query.search.trim() !== '') {
+      params = params.set('search', query.search.trim());
+    }
+    return this.http.get<PagedResponse<PatientListItem>>(this.url, { params });
+  }
 
   get(patientId: number): Observable<Patient> {
     return this.http.get<Patient>(`${this.url}/${patientId}`);

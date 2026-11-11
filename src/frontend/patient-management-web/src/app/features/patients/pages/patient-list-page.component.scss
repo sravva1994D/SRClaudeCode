@@ -1,0 +1,56 @@
+.patient-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 800px;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.search {
+  width: 100%;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+  padding: 8px 0;
+  border-bottom: 1px solid currentColor;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta {
+  font-size: 0.875rem;
+}
+
+.phone {
+  white-space: nowrap;
+}
+
+.error,
+.empty {
+  padding: 8px 0;
+}

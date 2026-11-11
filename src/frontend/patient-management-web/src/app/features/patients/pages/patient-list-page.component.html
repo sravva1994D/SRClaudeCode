@@ -1,0 +1,56 @@
+<section class="patient-list">
+  <header class="heading">
+    <h1>{{ 'nav.patients' | translate }}</h1>
+    <a mat-flat-button color="primary" routerLink="/patients/new">{{
+      'patients.newPatient' | translate
+    }}</a>
+  </header>
+
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>{{ 'patients.search' | translate }}</mat-label>
+    <input matInput type="search" [formControl]="searchControl" autocomplete="off" />
+    <mat-hint>{{ 'patients.searchHint' | translate }}</mat-hint>
+  </mat-form-field>
+
+  @if (loading()) {
+    <mat-progress-bar
+      mode="indeterminate"
+      [attr.aria-label]="'patients.loading' | translate"
+    ></mat-progress-bar>
+  }
+
+  @if (loadFailed()) {
+    <p class="error" role="alert">{{ 'patients.loadFailed' | translate }}</p>
+  }
+
+  @if (page(); as result) {
+    @if (result.items.length === 0 && !loading()) {
+      <p class="empty">{{ 'patients.noResults' | translate }}</p>
+    } @else {
+      <ul class="rows" [attr.aria-label]="'nav.patients' | translate">
+        @for (item of result.items; track item.patientId) {
+          <li class="row">
+            <div class="identity">
+              <a [routerLink]="['/patients', item.patientId, 'edit']">{{ item.fullName }}</a>
+              <span class="meta">
+                {{ item.dateOfBirth | date: 'mediumDate' }}, {{ item.dateOfBirth | age }}
+                {{ 'patients.years' | translate }},
+                {{ genderLabelKey(item.genderId) | translate }}
+              </span>
+            </div>
+            <span class="phone">{{ item.phoneNumber ?? '' }}</span>
+          </li>
+        }
+      </ul>
+
+      <mat-paginator
+        [length]="result.totalCount"
+        [pageSize]="pageSize"
+        [pageIndex]="result.pageNumber - 1"
+        [hidePageSize]="true"
+        [showFirstLastButtons]="true"
+        (page)="changePage($event)"
+      ></mat-paginator>
+    }
+  }
+</section>
