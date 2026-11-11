@@ -6,6 +6,8 @@ export interface Patient {
   genderId: number;
   phoneNumber: string | null;
   address: string | null;
+  bloodGroupId: number | null;
+  chronicConditions: string | null;
 }
 
 /** Create and update body. The API stores the phone number as digits only. */
@@ -15,6 +17,8 @@ export interface PatientRequest {
   genderId: number;
   phoneNumber: string | null;
   address: string | null;
+  bloodGroupId: number | null;
+  chronicConditions: string | null;
 }
 
 /** The few fields a duplicate warning shows. */
@@ -40,6 +44,12 @@ export interface PagedResponse<T> {
   pageNumber: number;
   pageSize: number;
 }
+
+/**
+ * Blood group ids match the seeded BloodGroups table (migration V0002). Each label is a translation key
+ * (patients.bloodGroup.<id>), so the symbols and the word "Unknown" come from the translation file.
+ */
+export const PATIENT_BLOOD_GROUP_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 /** Gender choices. The ids match the seeded Genders table (migration V0002). */
 export const PATIENT_GENDER_OPTIONS = [

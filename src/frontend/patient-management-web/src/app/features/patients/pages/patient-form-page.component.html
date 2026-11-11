@@ -65,6 +65,18 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
+        <mat-label>{{ 'patients.bloodGroup' | translate }}</mat-label>
+        <mat-select formControlName="bloodGroupId">
+          <mat-option [value]="null">{{ 'patients.notRecorded' | translate }}</mat-option>
+          @for (bloodGroupId of bloodGroupIds; track bloodGroupId) {
+            <mat-option [value]="bloodGroupId">{{
+              'patients.bloodGroup.' + bloodGroupId | translate
+            }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
         <mat-label>{{ 'patients.phoneNumber' | translate }}</mat-label>
         <input matInput formControlName="phoneNumber" autocomplete="tel" />
         @if (
@@ -80,6 +92,14 @@
         <textarea matInput formControlName="address" rows="2"></textarea>
         @if (form.controls.address.hasError('maxlength')) {
           <mat-error>{{ 'patients.addressTooLong' | translate }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'patients.chronicConditions' | translate }}</mat-label>
+        <textarea matInput formControlName="chronicConditions" rows="2"></textarea>
+        @if (form.controls.chronicConditions.hasError('maxlength')) {
+          <mat-error>{{ 'patients.chronicConditionsTooLong' | translate }}</mat-error>
         }
       </mat-form-field>
 

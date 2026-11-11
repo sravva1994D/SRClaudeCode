@@ -17,6 +17,8 @@ const ASHA: Patient = {
   genderId: 2,
   phoneNumber: '9876543210',
   address: '12 Lake Road',
+  bloodGroupId: 3,
+  chronicConditions: 'Asthma',
 };
 
 describe('PatientProfilePageComponent', () => {

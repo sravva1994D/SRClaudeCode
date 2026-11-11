@@ -9,6 +9,8 @@ public sealed class PatientFieldsValidator : AbstractValidator<PatientFields>
     public const int MaximumNameLength = 200;
     public const int MaximumPhoneLength = 20;
     public const int MaximumAddressLength = 500;
+    public const int MaximumChronicConditionsLength = 1000;
+    public const int MaximumBloodGroupId = 9;
 
     public PatientFieldsValidator()
     {
@@ -29,6 +31,15 @@ public sealed class PatientFieldsValidator : AbstractValidator<PatientFields>
 
         RuleFor(fields => fields.Address)
             .MaximumLength(MaximumAddressLength);
+
+        // The BloodGroups table is seeded with ids 1 to 9 (migration V0002). A value outside that range is rejected here
+        // so the database foreign key never has to report it.
+        RuleFor(fields => fields.BloodGroupId)
+            .InclusiveBetween(1, MaximumBloodGroupId)
+            .When(fields => fields.BloodGroupId.HasValue);
+
+        RuleFor(fields => fields.ChronicConditions)
+            .MaximumLength(MaximumChronicConditionsLength);
     }
 
     private static bool IsPhoneCharacter(char character) => char.IsDigit(character) || " +-()".Contains(character);
