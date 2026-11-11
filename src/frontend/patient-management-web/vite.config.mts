@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [angular({ tsconfig: 'tsconfig.spec.json' })],
   test: {
     environment: 'jsdom',
+    globals: true,
     setupFiles: ['src/test-setup.ts'],
     include: ['src/**/*.spec.ts'],
   },

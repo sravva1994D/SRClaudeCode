@@ -1,0 +1,18 @@
+{
+  "app.title": "Patient Management",
+  "nav.dashboard": "Dashboard",
+  "nav.patients": "Patients",
+  "nav.appointments": "Appointments",
+  "nav.consultation": "Consultation",
+  "nav.prescription": "Prescription",
+  "nav.history": "Visit history",
+  "nav.export": "Export",
+  "nav.settings": "Settings",
+  "nav.main": "Main navigation",
+  "placeholder.description": "This screen is not built yet.",
+  "errors.network": "Cannot reach the server. Check your connection and try again.",
+  "errors.server": "Something went wrong on the server. Try again in a moment.",
+  "errors.request": "The request could not be completed.",
+  "errors.unknown": "An unexpected error occurred.",
+  "notifications.dismiss": "Dismiss"
+}

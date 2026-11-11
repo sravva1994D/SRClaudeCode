@@ -11,8 +11,12 @@ public sealed class ApplicationStartupTests(WebApplicationFactory<Program> facto
     [Fact]
     public async Task Get_OpenApiDocument_ReturnsOk()
     {
-        using var client = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"))
-            .CreateClient();
+        // Migrations stay off so the test never touches the development database.
+        using var client = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Development");
+            builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
+        }).CreateClient();
 
         var response = await client.GetAsync("/openapi/v1.json");
 
