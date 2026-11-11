@@ -1,6 +1,7 @@
 using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
+using PatientManagement.Application.Appointments;
 using PatientManagement.Application.Auditing;
 using PatientManagement.Application.Interfaces;
 using PatientManagement.Domain.Appointments;
@@ -27,6 +28,18 @@ public sealed class SqlAppointmentRepository(
         WHERE AppointmentId = @AppointmentId AND IsActive = 1;
         """;
 
+    // The calendar's range read. Uses the slot index for the range and joins the name only for the rows returned.
+    private const string ListBetweenSql = """
+        SELECT a.AppointmentId, a.PatientId, p.FullName, a.SlotStart, a.AppointmentStatusId
+        FROM dbo.Appointments AS a
+        INNER JOIN dbo.Patients AS p ON p.PatientId = a.PatientId
+        WHERE a.IsActive = 1
+          AND p.IsActive = 1
+          AND a.SlotStart >= @FromUtc
+          AND a.SlotStart < @ToUtc
+        ORDER BY a.SlotStart, a.AppointmentId;
+        """;
+
     // The filtered unique index UX_Appointments_SlotStart rejects a second active booking for the same slot.
     private const string InsertSql = """
         INSERT INTO dbo.Appointments (PatientId, SlotStart, AppointmentStatusId, CreatedBy, ModifiedDate, ModifiedBy)
@@ -44,6 +57,33 @@ public sealed class SqlAppointmentRepository(
 
         await using var connection = await connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         return await ReadAsync(connection, transaction: null, appointmentId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AppointmentListItem>> ListActiveBetweenAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = ListBetweenSql;
+        command.CommandTimeout = options.Value.CommandTimeoutSeconds;
+        command.Parameters.Add(new SqlParameter("@FromUtc", DateTime.SpecifyKind(fromUtc, DateTimeKind.Utc)));
+        command.Parameters.Add(new SqlParameter("@ToUtc", DateTime.SpecifyKind(toUtc, DateTimeKind.Utc)));
+
+        var items = new List<AppointmentListItem>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            items.Add(new AppointmentListItem(
+                reader.GetInt32(0),
+                reader.GetInt32(1),
+                reader.GetString(2),
+                DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc),
+                reader.GetInt32(4)));
+        }
+
+        return items;
     }
 
     public async Task AddAsync(Appointment appointment, int changedByUserId, CancellationToken cancellationToken)
