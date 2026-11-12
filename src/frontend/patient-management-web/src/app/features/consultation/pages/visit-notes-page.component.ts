@@ -15,10 +15,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
-import { catchError, forkJoin, Observable, of, switchMap } from 'rxjs';
+import { catchError, forkJoin, merge, Observable, of, switchMap } from 'rxjs';
 
 import { TranslationService } from '../../../core/i18n/translation.service';
 import { ApiRequestError } from '../../../core/http/api-request-error';
+import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import {
   DIAGNOSIS_CODE_MAXIMUM_LENGTH,
@@ -60,7 +61,7 @@ interface DiagnosisControls {
   styleUrl: './visit-notes-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class VisitNotesPageComponent implements OnInit {
+export class VisitNotesPageComponent implements OnInit, HasUnsavedChanges {
   // Bound from the route (withComponentInputBinding).
   readonly visitId = input.required<string>();
 
@@ -80,6 +81,8 @@ export class VisitNotesPageComponent implements OnInit {
   readonly savedNotes = signal<VisitNotes | null>(null);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
+  /** True once the user edits the form, until the drafts are saved or reloaded from the server. */
+  readonly unsaved = signal(false);
 
   readonly notInProgress = computed(
     () => this.visit() !== null && this.visit()?.statusId !== VISIT_STATUS_IN_PROGRESS,
@@ -90,7 +93,14 @@ export class VisitNotesPageComponent implements OnInit {
   readonly medications = new FormArray<FormGroup<MedicationControls>>([]);
 
   ngOnInit(): void {
+    merge(this.complaints.valueChanges, this.diagnoses.valueChanges, this.medications.valueChanges)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.unsaved.set(true));
     this.load();
+  }
+
+  hasUnsavedChanges(): boolean {
+    return this.unsaved();
   }
 
   get complaintsAtLimit(): boolean {
@@ -206,6 +216,7 @@ export class VisitNotesPageComponent implements OnInit {
           this.notifications.showSuccess('consultation.notes.completed');
           this.load();
         } else {
+          this.unsaved.set(false);
           this.notifications.showSuccess('consultation.notes.saved');
         }
       },
@@ -237,6 +248,8 @@ export class VisitNotesPageComponent implements OnInit {
         if (notes !== null) {
           this.fillForm(notes);
         }
+        // Filling the form from the server is not an edit by the user.
+        this.unsaved.set(false);
       });
   }
 

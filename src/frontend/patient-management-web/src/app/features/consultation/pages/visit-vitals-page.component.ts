@@ -19,6 +19,7 @@ import { forkJoin, of, catchError } from 'rxjs';
 
 import { TranslationService } from '../../../core/i18n/translation.service';
 import { ApiRequestError } from '../../../core/http/api-request-error';
+import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import {
   RecordVitalsRequest,
@@ -66,7 +67,7 @@ const SIGN_LABEL_KEYS: Readonly<Record<string, string>> = {
   styleUrl: './visit-vitals-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class VisitVitalsPageComponent implements OnInit {
+export class VisitVitalsPageComponent implements OnInit, HasUnsavedChanges {
   // Bound from the route (withComponentInputBinding).
   readonly visitId = input.required<string>();
 
@@ -116,6 +117,11 @@ export class VisitVitalsPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+  }
+
+  /** The entry form holds edits that are not saved. The recorded view has none. */
+  hasUnsavedChanges(): boolean {
+    return this.recorded() === null && this.form.dirty;
   }
 
   save(): void {

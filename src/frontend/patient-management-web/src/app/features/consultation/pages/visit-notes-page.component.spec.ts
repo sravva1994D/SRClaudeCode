@@ -81,6 +81,23 @@ describe('VisitNotesPageComponent', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
+  it('has no unsaved changes when the page opens, even though the form was filled from the server', () => {
+    create(IN_PROGRESS, SAVED_NOTES);
+
+    expect(fixture.componentInstance.hasUnsavedChanges()).toBe(false);
+  });
+
+  it('has unsaved changes after the user adds a row, and none once the drafts are saved', () => {
+    create(IN_PROGRESS, EMPTY_NOTES);
+    const page = fixture.componentInstance;
+
+    page.addComplaint('Fever');
+    expect(page.hasUnsavedChanges()).toBe(true);
+
+    page.save();
+    expect(page.hasUnsavedChanges()).toBe(false);
+  });
+
   it('fills the form with the saved complaints and diagnoses', () => {
     create(IN_PROGRESS, SAVED_NOTES);
 
