@@ -47,6 +47,38 @@
         <dd>{{ patient.chronicConditions ?? ('patients.notRecorded' | translate) }}</dd>
       </dl>
 
+      <section class="appointments" aria-labelledby="appointments-heading">
+        <h2 id="appointments-heading">{{ 'patients.appointmentsTitle' | translate }}</h2>
+
+        @if (historyFailed()) {
+          <p class="error" role="alert">{{ 'patients.appointmentsFailed' | translate }}</p>
+        } @else {
+          @if (history(); as page) {
+            @if (page.items.length === 0) {
+              <p class="empty">{{ 'patients.noAppointments' | translate }}</p>
+            } @else {
+              <ul class="rows">
+                @for (appointment of page.items; track appointment.appointmentId) {
+                  <li class="row">
+                    <span class="time">{{
+                      appointment.slotStartUtc | date: 'EEE d MMM yyyy, shortTime'
+                    }}</span>
+                    <span class="status">{{ statusKey(appointment.statusId) | translate }}</span>
+                  </li>
+                }
+              </ul>
+              <mat-paginator
+                [length]="page.totalCount"
+                [pageSize]="appointmentsPageSize"
+                [pageIndex]="historyPageNumber() - 1"
+                [hidePageSize]="true"
+                (page)="changeHistoryPage($event)"
+              ></mat-paginator>
+            }
+          }
+        }
+      </section>
+
       <section class="visits" aria-labelledby="visits-heading">
         <h2 id="visits-heading">{{ 'patients.visitsTitle' | translate }}</h2>
         <p>{{ 'patients.visitsPlaceholder' | translate }}</p>

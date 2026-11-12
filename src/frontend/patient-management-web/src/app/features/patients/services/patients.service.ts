@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
+import { PatientAppointment } from '../../../core/models/appointment.model';
 import {
   PagedResponse,
   Patient,
@@ -30,6 +31,19 @@ export class PatientsService {
       params = params.set('search', query.search.trim());
     }
     return this.http.get<PagedResponse<PatientListItem>>(this.url, { params });
+  }
+
+  /** One page of the patient's appointments, newest first, with every status. */
+  appointmentHistory(
+    patientId: number,
+    page: number,
+    pageSize: number,
+  ): Observable<PagedResponse<PatientAppointment>> {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    return this.http.get<PagedResponse<PatientAppointment>>(
+      `${this.url}/${patientId}/appointments`,
+      { params },
+    );
   }
 
   /** The patients the signed-in user opened most recently, newest first. */

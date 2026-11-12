@@ -15,6 +15,13 @@ export interface AppointmentDetails {
   statusId: number;
 }
 
+/** One appointment in a patient's history: the slot, and its status. */
+export interface PatientAppointment {
+  appointmentId: number;
+  slotStartUtc: string;
+  statusId: number;
+}
+
 /** Booking body. The slot start is sent as an ISO UTC timestamp. */
 export interface ScheduleAppointmentRequest {
   patientId: number;
