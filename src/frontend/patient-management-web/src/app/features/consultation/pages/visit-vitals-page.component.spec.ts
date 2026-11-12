@@ -63,6 +63,17 @@ describe('VisitVitalsPageComponent', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
+  it('has unsaved changes only after the user types into the entry form', () => {
+    create(VISIT, null);
+    const page = fixture.componentInstance;
+    expect(page.hasUnsavedChanges()).toBe(false);
+
+    page.form.controls.pulse.setValue(72);
+    page.form.controls.pulse.markAsDirty();
+
+    expect(page.hasUnsavedChanges()).toBe(true);
+  });
+
   it('shows the entry form when the visit is in progress and no vitals are recorded', () => {
     create(VISIT, null);
 
