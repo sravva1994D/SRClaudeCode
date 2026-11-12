@@ -14,6 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { Router, RouterLink } from '@angular/router';
 import {
   BehaviorSubject,
   catchError,
@@ -26,7 +27,10 @@ import {
   tap,
 } from 'rxjs';
 
-import { AppointmentListItem } from '../../../core/models/appointment.model';
+import {
+  APPOINTMENT_STATUS_SCHEDULED,
+  AppointmentListItem,
+} from '../../../core/models/appointment.model';
 import { PatientListItem } from '../../../core/models/patient.model';
 import { ApiRequestError } from '../../../core/http/api-request-error';
 import { NotificationService } from '../../../core/notifications/notification.service';
@@ -52,6 +56,7 @@ interface CalendarRange {
   imports: [
     DatePipe,
     ReactiveFormsModule,
+    RouterLink,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -66,6 +71,7 @@ export class CalendarPageComponent implements OnInit {
   private readonly appointments = inject(AppointmentsService);
   private readonly patients = inject(PatientsService);
   private readonly notifications = inject(NotificationService);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly view = signal<'day' | 'week'>('day');
@@ -91,6 +97,8 @@ export class CalendarPageComponent implements OnInit {
   readonly chosenPatient = signal<PatientListItem | null>(null);
   readonly booking = signal(false);
   readonly bookError = signal<string | null>(null);
+  /** The appointment whose visit is being started, so a second click cannot start it twice. */
+  readonly startingAppointmentId = signal<number | null>(null);
 
   private readonly range = new BehaviorSubject<CalendarRange>(this.currentRange());
 
@@ -155,6 +163,29 @@ export class CalendarPageComponent implements OnInit {
 
   isBookable(day: Date, slot: Date): boolean {
     return !this.bookedAt(day, slot) && !isPastSlot(this.cellTime(day, slot), this.now());
+  }
+
+  /** Only a scheduled appointment can start a visit; the API refuses the others (422). */
+  canStartVisit(item: AppointmentListItem): boolean {
+    return item.statusId === APPOINTMENT_STATUS_SCHEDULED;
+  }
+
+  /** Starts the visit and opens the vitals page for it. Failures are shown by the error interceptor. */
+  startVisit(item: AppointmentListItem): void {
+    if (this.startingAppointmentId() !== null) {
+      return;
+    }
+
+    this.startingAppointmentId.set(item.appointmentId);
+    this.appointments
+      .startVisit(item.appointmentId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (visit) => {
+          void this.router.navigate(['/consultation/visits', visit.visitId, 'vitals']);
+        },
+        error: () => this.startingAppointmentId.set(null),
+      });
   }
 
   selectSlot(day: Date, slot: Date): void {

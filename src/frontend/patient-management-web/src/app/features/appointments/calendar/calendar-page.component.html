@@ -64,6 +64,24 @@
               <td>
                 @if (bookedAt(day, slot); as item) {
                   <span class="booked">{{ item.patientFullName }}</span>
+                  @if (item.visitId !== null) {
+                    <a
+                      mat-button
+                      class="visit-action"
+                      [routerLink]="['/consultation/visits', item.visitId, 'vitals']"
+                      >{{ 'appointments.openVisit' | translate }}</a
+                    >
+                  } @else if (canStartVisit(item)) {
+                    <button
+                      mat-button
+                      type="button"
+                      class="visit-action"
+                      [disabled]="startingAppointmentId() !== null"
+                      (click)="startVisit(item)"
+                    >
+                      {{ 'appointments.startVisit' | translate }}
+                    </button>
+                  }
                 } @else if (isBookable(day, slot)) {
                   <button
                     type="button"

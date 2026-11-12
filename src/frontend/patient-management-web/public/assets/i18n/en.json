@@ -99,6 +99,8 @@
   "appointments.findPatient": "Find patient by name or phone",
   "appointments.book": "Book",
   "appointments.cancel": "Cancel",
+  "appointments.startVisit": "Start visit",
+  "appointments.openVisit": "Open visit",
   "appointments.booked": "Appointment booked.",
   "appointments.loading": "Loading appointments",
   "appointments.loadFailed": "The calendar could not be loaded. Try again.",
