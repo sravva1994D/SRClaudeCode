@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PatientManagement.Application.Interfaces;
@@ -8,7 +9,10 @@ using PatientManagement.Application.Visits.Handlers;
 
 namespace PatientManagement.API.Controllers;
 
-/// <summary>Reads visits (consultations) and records their vitals (plan Sprint 7–8, items 32 and 33).</summary>
+/// <summary>
+/// Reads visits (consultations), records their vitals (plan Sprint 7–8, item 33), and saves their complaints and
+/// diagnoses as drafts (item 34).
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/v1/visits")]
@@ -16,6 +20,11 @@ public sealed class VisitsController(
     GetVisitQueryHandler getVisit,
     RecordVitalsCommandHandler recordVitals,
     GetVitalsQueryHandler getVitals,
+    SaveComplaintsCommandHandler saveComplaints,
+    IValidator<SaveComplaintsCommand> saveComplaintsValidator,
+    SaveDiagnosesCommandHandler saveDiagnoses,
+    IValidator<SaveDiagnosesCommand> saveDiagnosesValidator,
+    GetVisitNotesQueryHandler getVisitNotes,
     ICurrentUser currentUser) : ControllerBase
 {
     /// <summary>Returns one active visit.</summary>
@@ -62,7 +71,67 @@ public sealed class VisitsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<VitalsDetails>> GetVitals(int visitId, CancellationToken cancellationToken) =>
         Ok(await getVitals.HandleAsync(new GetVitalsQuery(visitId), cancellationToken));
+
+    /// <summary>Returns the complaints and diagnoses saved for the visit.</summary>
+    [HttpGet("{visitId:int}/notes")]
+    [ProducesResponseType<VisitNotesDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<VisitNotesDetails>> GetNotes(int visitId, CancellationToken cancellationToken) =>
+        Ok(await getVisitNotes.HandleAsync(new GetVisitNotesQuery(visitId), cancellationToken));
+
+    /// <summary>
+    /// Saves the visit's complaints as a draft: the list replaces the saved complaints. Blank entries are dropped. An
+    /// unchanged list writes nothing. A visit that is not in progress returns 422.
+    /// </summary>
+    [HttpPut("{visitId:int}/complaints")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> SaveComplaints(
+        int visitId,
+        [FromBody] SaveComplaintsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new SaveComplaintsCommand(visitId, request.Complaints, currentUser.UserId);
+        await saveComplaintsValidator.ValidateAndThrowAsync(command, cancellationToken);
+        await saveComplaints.HandleAsync(command, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Saves the visit's diagnoses as a draft: the list replaces the saved diagnoses. Entries with blank text are dropped.
+    /// An unchanged list writes nothing. A visit that is not in progress returns 422.
+    /// </summary>
+    [HttpPut("{visitId:int}/diagnoses")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> SaveDiagnoses(
+        int visitId,
+        [FromBody] SaveDiagnosesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var entries = request.Diagnoses?.Select(entry => new DiagnosisEntry(entry.Text, entry.Code)).ToList();
+        var command = new SaveDiagnosesCommand(visitId, entries, currentUser.UserId);
+        await saveDiagnosesValidator.ValidateAndThrowAsync(command, cancellationToken);
+        await saveDiagnoses.HandleAsync(command, cancellationToken);
+        return NoContent();
+    }
 }
+
+/// <summary>Complaints draft body. The list is required; an empty list clears the complaints.</summary>
+public sealed record SaveComplaintsRequest(IReadOnlyList<string>? Complaints);
+
+/// <summary>One diagnosis entry in a draft: the notes and an optional reference code.</summary>
+public sealed record DiagnosisEntryRequest(string? Text, string? Code);
+
+/// <summary>Diagnoses draft body. The list is required; an empty list clears the diagnoses.</summary>
+public sealed record SaveDiagnosesRequest(IReadOnlyList<DiagnosisEntryRequest>? Diagnoses);
 
 /// <summary>Vitals body. Every value is optional; only the values measured are sent.</summary>
 public sealed record RecordVitalsRequest(

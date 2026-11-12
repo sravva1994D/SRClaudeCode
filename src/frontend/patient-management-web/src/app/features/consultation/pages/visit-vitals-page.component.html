@@ -1,5 +1,10 @@
 <section class="vitals-page">
-  <h1>{{ 'consultation.vitals.title' | translate }}</h1>
+  <header class="heading">
+    <h1>{{ 'consultation.vitals.title' | translate }}</h1>
+    <a mat-button [routerLink]="['/consultation/visits', visitId(), 'notes']">
+      {{ 'consultation.vitals.notesLink' | translate }}
+    </a>
+  </header>
 
   @if (loading()) {
     <mat-progress-bar

@@ -10,6 +10,12 @@ public interface IVisitRepository
     Task<Visit?> FindActiveAsync(int visitId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Returns the active visit and locks its row until the unit of work ends. Writes that depend on the visit's status
+    /// call this first, so two saves for one visit run one after the other and see the current status.
+    /// </summary>
+    Task<Visit?> FindActiveForUpdateAsync(int visitId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Inserts a visit and sets its id and row version. Throws <see cref="Domain.Exceptions.VisitAlreadyStartedException"/>
     /// when the appointment already has an active visit.
     /// </summary>

@@ -14,6 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { RouterLink } from '@angular/router';
 import { forkJoin, of, catchError } from 'rxjs';
 
 import { TranslationService } from '../../../core/i18n/translation.service';
@@ -54,6 +55,7 @@ const SIGN_LABEL_KEYS: Readonly<Record<string, string>> = {
   selector: 'app-visit-vitals-page',
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
