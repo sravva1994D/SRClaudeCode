@@ -15,7 +15,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, Observable, of, switchMap } from 'rxjs';
 
 import { TranslationService } from '../../../core/i18n/translation.service';
 import { ApiRequestError } from '../../../core/http/api-request-error';
@@ -168,6 +168,15 @@ export class VisitNotesPageComponent implements OnInit {
   }
 
   save(): void {
+    this.submit(false);
+  }
+
+  /** Saves the drafts, then completes the visit, so unsaved edits are not lost when the visit closes. */
+  completeVisit(): void {
+    this.submit(true);
+  }
+
+  private submit(complete: boolean): void {
     if (this.saving()) {
       return;
     }
@@ -181,26 +190,34 @@ export class VisitNotesPageComponent implements OnInit {
     const visitId = Number(this.visitId());
     this.saving.set(true);
     this.saveError.set(null);
-    forkJoin([
+    const drafts = forkJoin([
       this.notesService.saveComplaints(visitId, this.complaintTexts()),
       this.notesService.saveDiagnoses(visitId, this.diagnosisEntries()),
       this.notesService.saveMedications(visitId, this.medicationEntries()),
-    ])
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.saving.set(false);
+    ]);
+    const request: Observable<unknown> = complete
+      ? drafts.pipe(switchMap(() => this.visits.complete(visitId)))
+      : drafts;
+
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.saving.set(false);
+        if (complete) {
+          this.notifications.showSuccess('consultation.notes.completed');
+          this.load();
+        } else {
           this.notifications.showSuccess('consultation.notes.saved');
-        },
-        error: (error: unknown) => {
-          this.saving.set(false);
-          this.saveError.set(
-            error instanceof ApiRequestError
-              ? error.message
-              : this.translations.translate('errors.unknown'),
-          );
-        },
-      });
+        }
+      },
+      error: (error: unknown) => {
+        this.saving.set(false);
+        this.saveError.set(
+          error instanceof ApiRequestError
+            ? error.message
+            : this.translations.translate('errors.unknown'),
+        );
+      },
+    });
   }
 
   private load(): void {

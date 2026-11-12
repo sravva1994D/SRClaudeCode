@@ -20,4 +20,14 @@ public interface IVisitRepository
     /// when the appointment already has an active visit.
     /// </summary>
     Task AddAsync(Visit visit, int changedByUserId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Saves the visit's status change and writes its audit row in the same transaction. The update checks the row version
+    /// the visit was read with; a changed row throws <see cref="Domain.Exceptions.ConcurrencyConflictException"/>.
+    /// </summary>
+    Task SaveStatusAsync(
+        Visit visit,
+        IReadOnlyDictionary<string, object?> auditValuesBefore,
+        int changedByUserId,
+        CancellationToken cancellationToken);
 }

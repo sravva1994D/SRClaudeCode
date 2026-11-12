@@ -149,6 +149,15 @@
         >
           {{ 'consultation.notes.save' | translate }}
         </button>
+        <button
+          mat-flat-button
+          color="accent"
+          type="button"
+          [disabled]="complaints.invalid || diagnoses.invalid || medications.invalid || saving()"
+          (click)="completeVisit()"
+        >
+          {{ 'consultation.notes.complete' | translate }}
+        </button>
       </div>
 
       @if (saving()) {

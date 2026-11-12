@@ -27,6 +27,7 @@ public sealed class VisitsController(
     GetVisitNotesQueryHandler getVisitNotes,
     SaveMedicationsCommandHandler saveMedications,
     IValidator<SaveMedicationsCommand> saveMedicationsValidator,
+    CompleteVisitCommandHandler completeVisit,
     ICurrentUser currentUser) : ControllerBase
 {
     /// <summary>Returns one active visit.</summary>
@@ -152,6 +153,19 @@ public sealed class VisitsController(
         await saveMedications.HandleAsync(command, cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Completes the visit and its appointment in one transaction. The visit must be in progress and have vitals recorded;
+    /// otherwise the response is 422 and nothing changes. The notes saved as drafts are kept as they are.
+    /// </summary>
+    [HttpPost("{visitId:int}/complete")]
+    [ProducesResponseType<VisitDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<VisitDetails>> Complete(int visitId, CancellationToken cancellationToken) =>
+        Ok(await completeVisit.HandleAsync(new CompleteVisitCommand(visitId, currentUser.UserId), cancellationToken));
 }
 
 /// <summary>Complaints draft body. The list is required; an empty list clears the complaints.</summary>

@@ -16,6 +16,14 @@ public sealed class SqlVisitRepository(
 {
     private const string TableName = "Visits";
 
+    // The row version check makes a status change fail when the visit changed since it was read (CLAUDE.md 6.3).
+    private const string SaveStatusSql = """
+        UPDATE dbo.Visits
+        SET VisitStatusId = @StatusId, ModifiedDate = @ModifiedDate, ModifiedBy = @ChangedBy
+        OUTPUT inserted.RowVersion
+        WHERE VisitId = @VisitId AND IsActive = 1 AND RowVersion = @RowVersion;
+        """;
+
     // SQL Server error numbers for a unique index or unique constraint violation.
     private const int DuplicateKeyErrorNumber = 2601;
     private const int UniqueConstraintErrorNumber = 2627;
@@ -56,6 +64,37 @@ public sealed class SqlVisitRepository(
     {
         var scope = UnitOfWorkScope.Current;
         return ReadAsync(scope.Connection, scope.Transaction, visitId, cancellationToken, FindActiveForUpdateSql);
+    }
+
+    public async Task SaveStatusAsync(
+        Visit visit,
+        IReadOnlyDictionary<string, object?> auditValuesBefore,
+        int changedByUserId,
+        CancellationToken cancellationToken)
+    {
+        var scope = UnitOfWorkScope.Current;
+        await using var command = scope.Connection.CreateCommand();
+        command.CommandText = SaveStatusSql;
+        command.CommandTimeout = options.Value.CommandTimeoutSeconds;
+        command.Transaction = scope.Transaction;
+        command.Parameters.Add(new SqlParameter("@VisitId", visit.VisitId));
+        command.Parameters.Add(new SqlParameter("@StatusId", visit.StatusId));
+        command.Parameters.Add(new SqlParameter("@RowVersion", visit.RowVersion));
+        command.Parameters.Add(new SqlParameter("@ChangedBy", changedByUserId));
+        command.Parameters.Add(new SqlParameter("@ModifiedDate", clock.UtcNow));
+
+        var newRowVersion = await command.ExecuteScalarAsync(cancellationToken) as byte[];
+        visit.SetRowVersion(newRowVersion ?? throw new ConcurrencyConflictException(TableName));
+
+        await auditLogWriter.WriteAsync(
+            new AuditEntry(
+                TableName,
+                visit.VisitId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                AuditAction.Update,
+                OldValues: auditValuesBefore,
+                NewValues: visit.AuditValues(),
+                changedByUserId),
+            cancellationToken);
     }
 
     public async Task AddAsync(Visit visit, int changedByUserId, CancellationToken cancellationToken)

@@ -50,6 +50,7 @@ public static class ApplicationServiceCollectionExtensions
 
         services.AddScoped<Visits.Handlers.StartVisitCommandHandler>();
         services.AddScoped<Visits.Handlers.GetVisitQueryHandler>();
+        services.AddScoped<Visits.Handlers.CompleteVisitCommandHandler>();
 
         services.AddScoped<Consultation.Handlers.RecordVitalsCommandHandler>();
         services.AddScoped<Consultation.Handlers.GetVitalsQueryHandler>();
