@@ -5,6 +5,7 @@ import { catchError, throwError } from 'rxjs';
 import { TranslationService } from '../i18n/translation.service';
 import { NotificationService } from '../notifications/notification.service';
 import { toApiRequestError } from './api-request-error';
+import { SUPPRESS_ERROR_NOTIFICATION } from './silent-errors';
 
 /**
  * Sign-in and session-check calls report their failures on the page that made them (the login form, or the guard
@@ -16,7 +17,9 @@ const QUIET_PATHS = ['/auth/login', '/auth/refresh-token'];
 export const errorInterceptor: HttpInterceptorFn = (request, next) => {
   const translations = inject(TranslationService);
   const notifications = inject(NotificationService);
-  const isQuiet = QUIET_PATHS.some((path) => request.url.endsWith(path));
+  const isQuiet =
+    QUIET_PATHS.some((path) => request.url.endsWith(path)) ||
+    request.context.get(SUPPRESS_ERROR_NOTIFICATION);
 
   return next(request).pipe(
     catchError((error: unknown) => {
