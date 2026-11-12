@@ -114,6 +114,7 @@
   "dashboard.upcomingTitle": "Upcoming (next 7 days)",
   "dashboard.noToday": "No appointments today.",
   "dashboard.noUpcoming": "No upcoming appointments.",
+  "dashboard.startVisit": "Start visit",
   "dashboard.loading": "Loading dashboard",
   "dashboard.loadFailed": "The dashboard could not be loaded. Try again.",
   "placeholder.description": "This screen is not built yet.",

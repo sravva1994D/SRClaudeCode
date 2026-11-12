@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { AppointmentListItem } from '../../core/models/appointment.model';
+import { Visit } from '../../core/models/visit.model';
 
 /**
  * Reads the appointments the dashboard shows. It makes the same request as the appointments calendar, rather than
@@ -18,5 +19,10 @@ export class DashboardService {
   appointments(from: Date, to: Date): Observable<AppointmentListItem[]> {
     const params = new HttpParams().set('from', from.toISOString()).set('to', to.toISOString());
     return this.http.get<AppointmentListItem[]>(this.url, { params });
+  }
+
+  /** Starts the visit for a scheduled appointment. The API answers 201 with the new visit. */
+  startVisit(appointmentId: number): Observable<Visit> {
+    return this.http.post<Visit>(`${this.url}/${appointmentId}/start-visit`, null);
   }
 }
