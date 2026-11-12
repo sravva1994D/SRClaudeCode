@@ -56,6 +56,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<Consultation.Handlers.GetVitalsQueryHandler>();
         services.AddScoped<Consultation.Handlers.UpdateVitalsCommandHandler>();
 
+        services.AddScoped<Prescriptions.Handlers.GeneratePrescriptionCommandHandler>();
+        services.AddScoped<Prescriptions.Handlers.GetPrescriptionQueryHandler>();
+
         services.AddScoped<Consultation.Handlers.SaveComplaintsCommandHandler>();
         services.AddScoped<IValidator<Consultation.SaveComplaintsCommand>, Validators.SaveComplaintsCommandValidator>();
         services.AddScoped<Consultation.Handlers.SaveDiagnosesCommandHandler>();
