@@ -26,6 +26,13 @@ public sealed class SqlVisitRepository(
         WHERE VisitId = @VisitId AND IsActive = 1;
         """;
 
+    // The update lock is held until the transaction ends, so a second writer for the same visit waits for the first.
+    private const string FindActiveForUpdateSql = """
+        SELECT VisitId, PatientId, AppointmentId, VisitStatusId, IsActive, RowVersion
+        FROM dbo.Visits WITH (UPDLOCK, HOLDLOCK)
+        WHERE VisitId = @VisitId AND IsActive = 1;
+        """;
+
     // The filtered unique index UX_Visits_AppointmentId rejects a second active visit for the same appointment.
     private const string InsertSql = """
         INSERT INTO dbo.Visits (PatientId, AppointmentId, VisitStatusId, CreatedBy, ModifiedDate, ModifiedBy)
@@ -43,6 +50,12 @@ public sealed class SqlVisitRepository(
 
         await using var connection = await connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         return await ReadAsync(connection, transaction: null, visitId, cancellationToken);
+    }
+
+    public Task<Visit?> FindActiveForUpdateAsync(int visitId, CancellationToken cancellationToken)
+    {
+        var scope = UnitOfWorkScope.Current;
+        return ReadAsync(scope.Connection, scope.Transaction, visitId, cancellationToken, FindActiveForUpdateSql);
     }
 
     public async Task AddAsync(Visit visit, int changedByUserId, CancellationToken cancellationToken)
@@ -89,10 +102,11 @@ public sealed class SqlVisitRepository(
         System.Data.Common.DbConnection connection,
         System.Data.Common.DbTransaction? transaction,
         int visitId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string sql = FindActiveSql)
     {
         await using var command = connection.CreateCommand();
-        command.CommandText = FindActiveSql;
+        command.CommandText = sql;
         command.Transaction = transaction;
         command.Parameters.Add(new SqlParameter("@VisitId", visitId));
 

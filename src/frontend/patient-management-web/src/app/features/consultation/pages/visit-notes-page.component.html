@@ -1,0 +1,131 @@
+<section class="notes-page">
+  <header class="heading">
+    <h1>{{ 'consultation.notes.title' | translate }}</h1>
+    <a mat-button [routerLink]="['/consultation/visits', visitId(), 'vitals']">
+      {{ 'consultation.notes.backToVitals' | translate }}
+    </a>
+  </header>
+
+  @if (loading()) {
+    <mat-progress-bar
+      mode="indeterminate"
+      [attr.aria-label]="'consultation.notes.loading' | translate"
+    ></mat-progress-bar>
+  } @else if (loadFailed()) {
+    <p class="error" role="alert">{{ 'consultation.notes.loadFailed' | translate }}</p>
+  } @else if (notInProgress()) {
+    <p class="notice" role="status">{{ 'consultation.notes.notInProgress' | translate }}</p>
+    <h2>{{ 'consultation.notes.complaints' | translate }}</h2>
+    @if ((savedNotes()?.complaints ?? []).length === 0) {
+      <p class="empty">{{ 'consultation.notes.none' | translate }}</p>
+    } @else {
+      <ul class="readonly">
+        @for (complaint of savedNotes()?.complaints ?? []; track $index) {
+          <li>{{ complaint }}</li>
+        }
+      </ul>
+    }
+    <h2>{{ 'consultation.notes.diagnoses' | translate }}</h2>
+    @if ((savedNotes()?.diagnoses ?? []).length === 0) {
+      <p class="empty">{{ 'consultation.notes.none' | translate }}</p>
+    } @else {
+      <ul class="readonly">
+        @for (entry of savedNotes()?.diagnoses ?? []; track $index) {
+          <li>
+            {{ entry.text }}
+            @if (entry.code) {
+              <span class="code">({{ entry.code }})</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  } @else {
+    <form (ngSubmit)="save()" novalidate>
+      <section class="group" aria-labelledby="complaints-heading">
+        <h2 id="complaints-heading">{{ 'consultation.notes.complaints' | translate }}</h2>
+        @for (control of complaints.controls; track $index) {
+          <div class="row">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'consultation.notes.complaintLabel' | translate }}</mat-label>
+              <textarea matInput rows="2" [formControl]="control"></textarea>
+              @if (control.hasError('maxlength')) {
+                <mat-error>{{ 'consultation.notes.textTooLong' | translate }}</mat-error>
+              }
+            </mat-form-field>
+            <button mat-button type="button" (click)="removeComplaint($index)">
+              {{ 'consultation.notes.remove' | translate }}
+            </button>
+          </div>
+        }
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="complaintsAtLimit"
+          (click)="addComplaint()"
+        >
+          {{ 'consultation.notes.addComplaint' | translate }}
+        </button>
+      </section>
+
+      <section class="group" aria-labelledby="diagnoses-heading">
+        <h2 id="diagnoses-heading">{{ 'consultation.notes.diagnoses' | translate }}</h2>
+        @for (group of diagnoses.controls; track $index) {
+          <div class="row" [formGroup]="group">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'consultation.notes.diagnosisLabel' | translate }}</mat-label>
+              <textarea matInput rows="2" formControlName="text"></textarea>
+              @if (group.controls.text.hasError('maxlength')) {
+                <mat-error>{{ 'consultation.notes.textTooLong' | translate }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="code-field">
+              <mat-label>{{ 'consultation.notes.codeLabel' | translate }}</mat-label>
+              <input matInput formControlName="code" autocomplete="off" />
+              @if (group.controls.code.hasError('maxlength')) {
+                <mat-error>{{ 'consultation.notes.codeTooLong' | translate }}</mat-error>
+              }
+            </mat-form-field>
+            <button mat-button type="button" (click)="removeDiagnosis($index)">
+              {{ 'consultation.notes.remove' | translate }}
+            </button>
+          </div>
+        }
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="diagnosesAtLimit"
+          (click)="addDiagnosis()"
+        >
+          {{ 'consultation.notes.addDiagnosis' | translate }}
+        </button>
+      </section>
+
+      @if (complaintsAtLimit || diagnosesAtLimit) {
+        <p class="notice" role="status">{{ 'consultation.notes.limitReached' | translate }}</p>
+      }
+
+      @if (saveError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+
+      <div class="actions">
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          [disabled]="complaints.invalid || diagnoses.invalid || saving()"
+        >
+          {{ 'consultation.notes.save' | translate }}
+        </button>
+      </div>
+
+      @if (saving()) {
+        <mat-progress-bar
+          mode="indeterminate"
+          [attr.aria-label]="'consultation.notes.saving' | translate"
+        ></mat-progress-bar>
+      }
+    </form>
+  }
+</section>

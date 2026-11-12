@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { of, throwError } from 'rxjs';
 
@@ -49,6 +50,7 @@ describe('VisitVitalsPageComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideNoopAnimations(),
+        provideRouter([]),
         { provide: VisitsService, useValue: { get: getVisit } },
         { provide: VitalsService, useValue: { get: getVitals, record } },
       ],

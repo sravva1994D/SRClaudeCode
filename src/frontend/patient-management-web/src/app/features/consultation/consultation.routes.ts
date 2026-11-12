@@ -12,5 +12,11 @@ export const CONSULTATION_ROUTES: Routes = [
         (module) => module.VisitVitalsPageComponent,
       ),
   },
+  {
+    path: 'visits/:visitId/notes',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./pages/visit-notes-page.component').then((module) => module.VisitNotesPageComponent),
+  },
   ...placeholderRoutes('nav.consultation'),
 ];
