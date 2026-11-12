@@ -25,6 +25,8 @@ public sealed class VisitsController(
     SaveDiagnosesCommandHandler saveDiagnoses,
     IValidator<SaveDiagnosesCommand> saveDiagnosesValidator,
     GetVisitNotesQueryHandler getVisitNotes,
+    SaveMedicationsCommandHandler saveMedications,
+    IValidator<SaveMedicationsCommand> saveMedicationsValidator,
     ICurrentUser currentUser) : ControllerBase
 {
     /// <summary>Returns one active visit.</summary>
@@ -122,6 +124,34 @@ public sealed class VisitsController(
         await saveDiagnoses.HandleAsync(command, cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Saves the visit's medications as a draft: the list replaces the saved medications. An entry with a blank name is
+    /// dropped; an entry missing its dosage, frequency or duration returns 422. An unchanged list writes nothing. A visit
+    /// that is not in progress returns 422.
+    /// </summary>
+    [HttpPut("{visitId:int}/medications")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> SaveMedications(
+        int visitId,
+        [FromBody] SaveMedicationsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var entries = request.Medications?.Select(entry => new MedicationEntry(
+            entry.MedicineName,
+            entry.Dosage,
+            entry.Frequency,
+            entry.Duration,
+            entry.SpecialInstructions)).ToList();
+        var command = new SaveMedicationsCommand(visitId, entries, currentUser.UserId);
+        await saveMedicationsValidator.ValidateAndThrowAsync(command, cancellationToken);
+        await saveMedications.HandleAsync(command, cancellationToken);
+        return NoContent();
+    }
 }
 
 /// <summary>Complaints draft body. The list is required; an empty list clears the complaints.</summary>
@@ -132,6 +162,17 @@ public sealed record DiagnosisEntryRequest(string? Text, string? Code);
 
 /// <summary>Diagnoses draft body. The list is required; an empty list clears the diagnoses.</summary>
 public sealed record SaveDiagnosesRequest(IReadOnlyList<DiagnosisEntryRequest>? Diagnoses);
+
+/// <summary>One medicine in a draft: name, dosage, frequency, duration, and an optional instruction.</summary>
+public sealed record MedicationEntryRequest(
+    string? MedicineName,
+    string? Dosage,
+    string? Frequency,
+    string? Duration,
+    string? SpecialInstructions);
+
+/// <summary>Medications draft body. The list is required; an empty list clears the medications.</summary>
+public sealed record SaveMedicationsRequest(IReadOnlyList<MedicationEntryRequest>? Medications);
 
 /// <summary>Vitals body. Every value is optional; only the values measured are sent.</summary>
 public sealed record RecordVitalsRequest(

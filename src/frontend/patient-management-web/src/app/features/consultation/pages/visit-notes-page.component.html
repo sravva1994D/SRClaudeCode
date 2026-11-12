@@ -40,6 +40,22 @@
         }
       </ul>
     }
+    <h2>{{ 'consultation.notes.medications' | translate }}</h2>
+    @if ((savedNotes()?.medications ?? []).length === 0) {
+      <p class="empty">{{ 'consultation.notes.none' | translate }}</p>
+    } @else {
+      <ul class="readonly">
+        @for (entry of savedNotes()?.medications ?? []; track $index) {
+          <li>
+            {{ entry.medicineName }}, {{ entry.dosage }}, {{ entry.frequency }},
+            {{ entry.duration }}
+            @if (entry.specialInstructions) {
+              <span class="code">({{ entry.specialInstructions }})</span>
+            }
+          </li>
+        }
+      </ul>
+    }
   } @else {
     <form (ngSubmit)="save()" novalidate>
       <section class="group" aria-labelledby="complaints-heading">
@@ -101,7 +117,22 @@
         </button>
       </section>
 
-      @if (complaintsAtLimit || diagnosesAtLimit) {
+      <section class="group" aria-labelledby="medications-heading">
+        <h2 id="medications-heading">{{ 'consultation.notes.medications' | translate }}</h2>
+        @for (group of medications.controls; track $index) {
+          <app-medication-row [group]="group" (removeRequested)="removeMedication($index)" />
+        }
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="medicationsAtLimit"
+          (click)="addMedication()"
+        >
+          {{ 'consultation.notes.addMedication' | translate }}
+        </button>
+      </section>
+
+      @if (complaintsAtLimit || diagnosesAtLimit || medicationsAtLimit) {
         <p class="notice" role="status">{{ 'consultation.notes.limitReached' | translate }}</p>
       }
 
@@ -114,7 +145,7 @@
           mat-flat-button
           color="primary"
           type="submit"
-          [disabled]="complaints.invalid || diagnoses.invalid || saving()"
+          [disabled]="complaints.invalid || diagnoses.invalid || medications.invalid || saving()"
         >
           {{ 'consultation.notes.save' | translate }}
         </button>

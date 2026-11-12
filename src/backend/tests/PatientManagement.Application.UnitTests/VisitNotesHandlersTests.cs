@@ -14,6 +14,7 @@ public sealed class VisitNotesHandlersTests
     private readonly IVisitRepository _visits = Substitute.For<IVisitRepository>();
     private readonly IComplaintRepository _complaints = Substitute.For<IComplaintRepository>();
     private readonly IDiagnosisRepository _diagnoses = Substitute.For<IDiagnosisRepository>();
+    private readonly IMedicationRepository _medications = Substitute.For<IMedicationRepository>();
 
     [Fact]
     public async Task SaveComplaints_ChangedDraft_ReplacesTheSavedComplaints()
@@ -119,7 +120,7 @@ public sealed class VisitNotesHandlersTests
             });
         _diagnoses.ListActiveForVisitAsync(3, Arg.Any<CancellationToken>())
             .Returns(new List<Diagnosis> { Diagnosis.Reconstitute(1, 3, "Viral fever", "J11", 0, true, [1]) });
-        var handler = new GetVisitNotesQueryHandler(_visits, _complaints, _diagnoses);
+        var handler = new GetVisitNotesQueryHandler(_visits, _complaints, _diagnoses, _medications);
 
         var notes = await handler.HandleAsync(new GetVisitNotesQuery(3), CancellationToken.None);
 

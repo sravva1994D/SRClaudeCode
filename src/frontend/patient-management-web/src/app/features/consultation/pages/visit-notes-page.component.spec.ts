@@ -24,22 +24,33 @@ const IN_PROGRESS: Visit = {
   statusId: VISIT_STATUS_IN_PROGRESS,
 };
 
-const EMPTY_NOTES: VisitNotes = { visitId: 5, complaints: [], diagnoses: [] };
+const EMPTY_NOTES: VisitNotes = { visitId: 5, complaints: [], diagnoses: [], medications: [] };
 
 const SAVED_NOTES: VisitNotes = {
   visitId: 5,
   complaints: ['Cough'],
   diagnoses: [{ text: 'Viral fever', code: 'J11' }],
+  medications: [
+    {
+      medicineName: 'Paracetamol',
+      dosage: '500mg',
+      frequency: 'Twice daily',
+      duration: '7 days',
+      specialInstructions: 'After food',
+    },
+  ],
 };
 
 describe('VisitNotesPageComponent', () => {
   let fixture: ComponentFixture<VisitNotesPageComponent>;
   let saveComplaints: ReturnType<typeof vi.fn>;
   let saveDiagnoses: ReturnType<typeof vi.fn>;
+  let saveMedications: ReturnType<typeof vi.fn>;
 
   function create(visit: Visit, notes: VisitNotes | null): void {
     saveComplaints = vi.fn(() => of(undefined));
     saveDiagnoses = vi.fn(() => of(undefined));
+    saveMedications = vi.fn(() => of(undefined));
 
     TestBed.configureTestingModule({
       imports: [VisitNotesPageComponent],
@@ -55,6 +66,7 @@ describe('VisitNotesPageComponent', () => {
             get: vi.fn(() => (notes === null ? throwError(() => new Error('x')) : of(notes))),
             saveComplaints,
             saveDiagnoses,
+            saveMedications,
           },
         },
       ],
@@ -86,6 +98,59 @@ describe('VisitNotesPageComponent', () => {
 
     expect(saveComplaints).toHaveBeenCalledWith(5, ['Fever']);
     expect(saveDiagnoses).toHaveBeenCalledWith(5, [{ text: 'Viral fever', code: null }]);
+  });
+
+  it('fills the medications from the saved notes', () => {
+    create(IN_PROGRESS, SAVED_NOTES);
+
+    expect(fixture.componentInstance.medications.at(0).getRawValue()).toEqual({
+      medicineName: 'Paracetamol',
+      dosage: '500mg',
+      frequency: 'Twice daily',
+      duration: '7 days',
+      specialInstructions: 'After food',
+    });
+  });
+
+  it('does not save when a medicine has no dosage', () => {
+    create(IN_PROGRESS, EMPTY_NOTES);
+    const page = fixture.componentInstance;
+    page.addMedication({
+      medicineName: 'Paracetamol',
+      dosage: '',
+      frequency: 'Twice daily',
+      duration: '7 days',
+      specialInstructions: null,
+    });
+
+    page.save();
+
+    expect(saveMedications).not.toHaveBeenCalled();
+    expect(saveComplaints).not.toHaveBeenCalled();
+  });
+
+  it('saves medicines trimmed, and treats blank instructions as none', () => {
+    create(IN_PROGRESS, EMPTY_NOTES);
+    const page = fixture.componentInstance;
+    page.addMedication({
+      medicineName: '  Paracetamol ',
+      dosage: ' 500mg',
+      frequency: 'Twice daily ',
+      duration: '7 days',
+      specialInstructions: '  ',
+    });
+
+    page.save();
+
+    expect(saveMedications).toHaveBeenCalledWith(5, [
+      {
+        medicineName: 'Paracetamol',
+        dosage: '500mg',
+        frequency: 'Twice daily',
+        duration: '7 days',
+        specialInstructions: null,
+      },
+    ]);
   });
 
   it('shows the saved notes read-only, with no form, once the visit is no longer in progress', () => {

@@ -60,6 +60,11 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IValidator<Consultation.SaveDiagnosesCommand>, Validators.SaveDiagnosesCommandValidator>();
         services.AddScoped<Consultation.Handlers.GetVisitNotesQueryHandler>();
 
+        services.AddScoped<Consultation.Handlers.SaveMedicationsCommandHandler>();
+        services.AddScoped<IValidator<Consultation.SaveMedicationsCommand>, Validators.SaveMedicationsCommandValidator>();
+        services.AddScoped<Consultation.Handlers.MedicineSuggestionsQueryHandler>();
+        services.AddScoped<IValidator<Consultation.MedicineSuggestionsQuery>, Validators.MedicineSuggestionsQueryValidator>();
+
         services.AddScoped<Appointments.Handlers.PatientAppointmentHistoryHandler>();
         services.AddScoped<IValidator<Appointments.PatientAppointmentHistoryQuery>, Validators.PatientAppointmentHistoryValidator>();
         return services;

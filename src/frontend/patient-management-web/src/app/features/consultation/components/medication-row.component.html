@@ -1,0 +1,70 @@
+<div class="row" [formGroup]="group()">
+  <mat-form-field appearance="outline" class="name-field">
+    <mat-label>{{ 'consultation.notes.medicineName' | translate }}</mat-label>
+    <input
+      matInput
+      formControlName="medicineName"
+      autocomplete="off"
+      [matAutocomplete]="auto"
+      [maxlength]="maximumNameLength"
+    />
+    <mat-autocomplete #auto="matAutocomplete">
+      @for (name of suggestions(); track name) {
+        <mat-option [value]="name">{{ name }}</mat-option>
+      }
+    </mat-autocomplete>
+    @if (group().controls.medicineName.hasError('required')) {
+      <mat-error>{{ 'validation.required' | translate }}</mat-error>
+    } @else if (group().controls.medicineName.hasError('maxlength')) {
+      <mat-error>{{ 'consultation.notes.medicineNameTooLong' | translate }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="short-field">
+    <mat-label>{{ 'consultation.notes.dosage' | translate }}</mat-label>
+    <input matInput formControlName="dosage" autocomplete="off" [maxlength]="maximumFieldLength" />
+    @if (group().controls.dosage.hasError('required')) {
+      <mat-error>{{ 'validation.required' | translate }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="short-field">
+    <mat-label>{{ 'consultation.notes.frequency' | translate }}</mat-label>
+    <input
+      matInput
+      formControlName="frequency"
+      autocomplete="off"
+      [maxlength]="maximumFieldLength"
+    />
+    @if (group().controls.frequency.hasError('required')) {
+      <mat-error>{{ 'validation.required' | translate }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="short-field">
+    <mat-label>{{ 'consultation.notes.duration' | translate }}</mat-label>
+    <input
+      matInput
+      formControlName="duration"
+      autocomplete="off"
+      [maxlength]="maximumFieldLength"
+    />
+    @if (group().controls.duration.hasError('required')) {
+      <mat-error>{{ 'validation.required' | translate }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="instructions-field">
+    <mat-label>{{ 'consultation.notes.instructions' | translate }}</mat-label>
+    <input
+      matInput
+      formControlName="specialInstructions"
+      autocomplete="off"
+      [maxlength]="maximumInstructionsLength"
+    />
+  </mat-form-field>
+
+  <button mat-button type="button" (click)="removeRequested.emit()">
+    {{ 'consultation.notes.remove' | translate }}
+  </button>
+</div>
