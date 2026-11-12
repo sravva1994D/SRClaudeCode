@@ -48,19 +48,22 @@ public sealed class VisitNotesHandlersTests
 
         await _complaints.DidNotReceive().DeactivateAsync(Arg.Any<Complaint>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
         await _complaints.DidNotReceive().AddAsync(Arg.Any<Complaint>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+        await _visits.DidNotReceive().MarkModifiedAsync(Arg.Any<Visit>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task SaveComplaints_CompletedVisit_ThrowsAndWritesNothing()
+    public async Task SaveComplaints_CompletedVisit_SavesAndStampsTheVisit()
     {
-        _visits.FindActiveForUpdateAsync(3, Arg.Any<CancellationToken>())
-            .Returns(Visit.Reconstitute(3, 7, 5, VisitStatuses.Completed, true, [1]));
+        var visit = Visit.Reconstitute(3, 7, 5, VisitStatuses.Completed, true, [1]);
+        _visits.FindActiveForUpdateAsync(3, Arg.Any<CancellationToken>()).Returns(visit);
+        _complaints.ListActiveForVisitAsync(3, Arg.Any<CancellationToken>()).Returns(new List<Complaint>());
         var handler = new SaveComplaintsCommandHandler(new InlineUnitOfWork(), _visits, _complaints);
 
-        var act = () => handler.HandleAsync(new SaveComplaintsCommand(3, ["Fever"], 1), CancellationToken.None);
+        await handler.HandleAsync(new SaveComplaintsCommand(3, ["Fever"], 1), CancellationToken.None);
 
-        await act.Should().ThrowAsync<DomainException>().Where(error => error.ErrorCode == "visit_not_in_progress");
-        await _complaints.DidNotReceive().AddAsync(Arg.Any<Complaint>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+        await _complaints.Received(1).AddAsync(
+            Arg.Is<Complaint>(complaint => complaint.Text == "Fever"), 1, Arg.Any<CancellationToken>());
+        await _visits.Received(1).MarkModifiedAsync(visit, 1, Arg.Any<CancellationToken>());
     }
 
     [Fact]

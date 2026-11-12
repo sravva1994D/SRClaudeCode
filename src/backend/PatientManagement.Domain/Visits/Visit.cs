@@ -21,7 +21,8 @@ public sealed class Visit
         int? appointmentId,
         int statusId,
         bool isActive,
-        byte[] rowVersion)
+        byte[] rowVersion,
+        DateTime modifiedDate)
     {
         VisitId = visitId;
         PatientId = patientId;
@@ -29,6 +30,7 @@ public sealed class Visit
         StatusId = statusId;
         IsActive = isActive;
         RowVersion = rowVersion;
+        ModifiedDate = modifiedDate;
     }
 
     public int VisitId { get; private set; }
@@ -43,9 +45,12 @@ public sealed class Visit
 
     public byte[] RowVersion { get; private set; }
 
+    /// <summary>When the visit or any of its records last changed, in UTC (plan item 38).</summary>
+    public DateTime ModifiedDate { get; private set; }
+
     /// <summary>
-    /// Vitals are recorded only while the visit is in progress. A completed visit is changed through the edit rules
-    /// instead (plan Sprint 7–8, item 38).
+    /// Vitals are recorded only while the visit is in progress. Notes, medications and vitals corrections are allowed
+    /// after completion (Q2), so only the recording and completion steps call this.
     /// </summary>
     public void EnsureInProgress()
     {
@@ -67,7 +72,7 @@ public sealed class Visit
 
     /// <summary>Starts a visit in progress. The appointment's own rules are checked by the appointment first.</summary>
     public static Visit Start(int patientId, int appointmentId) =>
-        new(0, patientId, appointmentId, VisitStatuses.InProgress, isActive: true, Array.Empty<byte>());
+        new(0, patientId, appointmentId, VisitStatuses.InProgress, isActive: true, Array.Empty<byte>(), default);
 
     /// <summary>Rebuilds a visit from a stored row.</summary>
     public static Visit Reconstitute(
@@ -76,8 +81,12 @@ public sealed class Visit
         int? appointmentId,
         int statusId,
         bool isActive,
-        byte[] rowVersion) =>
-        new(visitId, patientId, appointmentId, statusId, isActive, rowVersion);
+        byte[] rowVersion,
+        DateTime modifiedDate = default) =>
+        new(visitId, patientId, appointmentId, statusId, isActive, rowVersion, modifiedDate);
+
+    /// <summary>Called by the repository after each save, with the time the save was made.</summary>
+    public void SetModifiedDate(DateTime modifiedDate) => ModifiedDate = modifiedDate;
 
     /// <summary>Called by the repository after insert, when the database has assigned the id.</summary>
     public void AssignVisitId(int visitId) => VisitId = visitId;

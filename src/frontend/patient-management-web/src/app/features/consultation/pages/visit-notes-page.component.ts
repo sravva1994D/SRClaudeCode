@@ -8,6 +8,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -43,13 +44,15 @@ interface DiagnosisControls {
 /**
  * Complaints, diagnosis and medications for a visit, saved as a draft. Each save replaces the visit's saved lists.
  * Blank complaint and diagnosis entries are dropped before saving; a medicine must have its name, dosage, frequency
- * and duration. The server enforces the same limits and the in-progress rule; the form mirrors them for feedback.
+ * and duration. Notes stay editable after the visit is completed (plan item 38); only completing the visit needs it
+ * in progress. The server enforces the same limits; the form mirrors them for feedback.
  */
 @Component({
   selector: 'app-visit-notes-page',
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    DatePipe,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -78,7 +81,6 @@ export class VisitNotesPageComponent implements OnInit, HasUnsavedChanges {
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
   readonly visit = signal<Visit | null>(null);
-  readonly savedNotes = signal<VisitNotes | null>(null);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
   /** True once the user edits the form, until the drafts are saved or reloaded from the server. */
@@ -217,6 +219,7 @@ export class VisitNotesPageComponent implements OnInit, HasUnsavedChanges {
           this.load();
         } else {
           this.unsaved.set(false);
+          this.refreshVisit();
           this.notifications.showSuccess('consultation.notes.saved');
         }
       },
@@ -244,12 +247,26 @@ export class VisitNotesPageComponent implements OnInit, HasUnsavedChanges {
         this.loading.set(false);
         this.visit.set(visit);
         this.loadFailed.set(visit === null || notes === null);
-        this.savedNotes.set(notes);
         if (notes !== null) {
           this.fillForm(notes);
         }
         // Filling the form from the server is not an edit by the user.
         this.unsaved.set(false);
+      });
+  }
+
+  /** Re-reads only the visit, so the last-modified time follows a save without refilling the form. */
+  private refreshVisit(): void {
+    this.visits
+      .get(Number(this.visitId()))
+      .pipe(
+        catchError(() => of(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((visit) => {
+        if (visit !== null) {
+          this.visit.set(visit);
+        }
       });
   }
 

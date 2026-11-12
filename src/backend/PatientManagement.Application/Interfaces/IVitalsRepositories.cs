@@ -21,4 +21,14 @@ public interface IVitalsRepository
     /// when the visit already has vitals.
     /// </summary>
     Task AddAsync(Vitals vitals, int changedByUserId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Saves a correction and writes an audit row that holds only the fields whose values changed. The update checks the
+    /// row version the vitals were read with; a changed row throws <see cref="Domain.Exceptions.ConcurrencyConflictException"/>.
+    /// </summary>
+    Task SaveChangesAsync(
+        Vitals vitals,
+        IReadOnlyDictionary<string, object?> auditValuesBefore,
+        int changedByUserId,
+        CancellationToken cancellationToken);
 }

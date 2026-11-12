@@ -51,6 +51,7 @@ public sealed class MedicationHandlersTests
 
         await _medications.DidNotReceive().DeactivateAsync(Arg.Any<Medication>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
         await _medications.DidNotReceive().AddAsync(Arg.Any<Medication>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+        await _visits.DidNotReceive().MarkModifiedAsync(Arg.Any<Visit>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -70,18 +71,20 @@ public sealed class MedicationHandlersTests
     }
 
     [Fact]
-    public async Task SaveMedications_CompletedVisit_ThrowsAndWritesNothing()
+    public async Task SaveMedications_CompletedVisit_SavesAndStampsTheVisit()
     {
-        _visits.FindActiveForUpdateAsync(3, Arg.Any<CancellationToken>())
-            .Returns(Visit.Reconstitute(3, 7, 5, VisitStatuses.Completed, true, [1]));
+        var visit = Visit.Reconstitute(3, 7, 5, VisitStatuses.Completed, true, [1]);
+        _visits.FindActiveForUpdateAsync(3, Arg.Any<CancellationToken>()).Returns(visit);
+        _medications.ListActiveForVisitAsync(3, Arg.Any<CancellationToken>()).Returns(new List<Medication>());
         var handler = new SaveMedicationsCommandHandler(new InlineUnitOfWork(), _visits, _medications);
 
-        var act = () => handler.HandleAsync(
+        await handler.HandleAsync(
             new SaveMedicationsCommand(3, [new MedicationEntry("Paracetamol", "500mg", "Twice daily", "7 days", null)], 1),
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<DomainException>().Where(error => error.ErrorCode == "visit_not_in_progress");
-        await _medications.DidNotReceive().AddAsync(Arg.Any<Medication>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+        await _medications.Received(1).AddAsync(
+            Arg.Is<Medication>(medication => medication.MedicineName == "Paracetamol"), 1, Arg.Any<CancellationToken>());
+        await _visits.Received(1).MarkModifiedAsync(visit, 1, Arg.Any<CancellationToken>());
     }
 
     [Fact]

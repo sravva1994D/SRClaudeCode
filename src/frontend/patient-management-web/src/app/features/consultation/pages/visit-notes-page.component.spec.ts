@@ -22,6 +22,7 @@ const IN_PROGRESS: Visit = {
   patientId: 7,
   appointmentId: 3,
   statusId: VISIT_STATUS_IN_PROGRESS,
+  modifiedDate: '2026-11-12T10:20:30Z',
 };
 
 const EMPTY_NOTES: VisitNotes = { visitId: 5, complaints: [], diagnoses: [], medications: [] };
@@ -207,12 +208,36 @@ describe('VisitNotesPageComponent', () => {
     expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
   });
 
-  it('shows the saved notes read-only, with no form, once the visit is no longer in progress', () => {
+  it('keeps the notes editable once the visit is completed, without the complete action', () => {
     create({ ...IN_PROGRESS, statusId: VISIT_STATUS_COMPLETED }, SAVED_NOTES);
 
-    expect(fixture.nativeElement.querySelector('form')).toBeNull();
+    expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.notice')).not.toBeNull();
-    expect(fixture.nativeElement.textContent).toContain('Cough');
+    expect(fixture.componentInstance.complaints.value).toEqual(['Cough']);
+    const buttonLabels = Array.from<HTMLButtonElement>(
+      fixture.nativeElement.querySelectorAll('button'),
+    ).map((button) => button.textContent?.trim());
+    expect(buttonLabels).not.toContain('consultation.notes.complete');
+  });
+
+  it('shows when the visit was last modified', () => {
+    create(IN_PROGRESS, SAVED_NOTES);
+
+    expect(fixture.nativeElement.querySelector('.modified time').getAttribute('datetime')).toBe(
+      '2026-11-12T10:20:30Z',
+    );
+  });
+
+  it('refreshes the last-modified time after a draft is saved', () => {
+    create(IN_PROGRESS, EMPTY_NOTES);
+    const page = fixture.componentInstance;
+    const refreshed = { ...IN_PROGRESS, modifiedDate: '2026-11-12T11:00:00Z' };
+    fixture.componentRef.injector.get(VisitsService).get = vi.fn(() => of(refreshed));
+    page.addComplaint('Fever');
+
+    page.save();
+
+    expect(page.visit()?.modifiedDate).toBe('2026-11-12T11:00:00Z');
   });
 
   it('shows the server message inline when a save is refused', () => {

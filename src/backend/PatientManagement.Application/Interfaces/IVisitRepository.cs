@@ -30,4 +30,10 @@ public interface IVisitRepository
         IReadOnlyDictionary<string, object?> auditValuesBefore,
         int changedByUserId,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stamps the visit as modified now (plan item 38) and writes an audit row for the new time. Called after any change to
+    /// the visit's notes, medications or vitals. The update checks the row version the visit was read with.
+    /// </summary>
+    Task MarkModifiedAsync(Visit visit, int changedByUserId, CancellationToken cancellationToken);
 }

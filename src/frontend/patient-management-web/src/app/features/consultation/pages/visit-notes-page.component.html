@@ -13,50 +13,20 @@
     ></mat-progress-bar>
   } @else if (loadFailed()) {
     <p class="error" role="alert">{{ 'consultation.notes.loadFailed' | translate }}</p>
-  } @else if (notInProgress()) {
-    <p class="notice" role="status">{{ 'consultation.notes.notInProgress' | translate }}</p>
-    <h2>{{ 'consultation.notes.complaints' | translate }}</h2>
-    @if ((savedNotes()?.complaints ?? []).length === 0) {
-      <p class="empty">{{ 'consultation.notes.none' | translate }}</p>
-    } @else {
-      <ul class="readonly">
-        @for (complaint of savedNotes()?.complaints ?? []; track $index) {
-          <li>{{ complaint }}</li>
-        }
-      </ul>
-    }
-    <h2>{{ 'consultation.notes.diagnoses' | translate }}</h2>
-    @if ((savedNotes()?.diagnoses ?? []).length === 0) {
-      <p class="empty">{{ 'consultation.notes.none' | translate }}</p>
-    } @else {
-      <ul class="readonly">
-        @for (entry of savedNotes()?.diagnoses ?? []; track $index) {
-          <li>
-            {{ entry.text }}
-            @if (entry.code) {
-              <span class="code">({{ entry.code }})</span>
-            }
-          </li>
-        }
-      </ul>
-    }
-    <h2>{{ 'consultation.notes.medications' | translate }}</h2>
-    @if ((savedNotes()?.medications ?? []).length === 0) {
-      <p class="empty">{{ 'consultation.notes.none' | translate }}</p>
-    } @else {
-      <ul class="readonly">
-        @for (entry of savedNotes()?.medications ?? []; track $index) {
-          <li>
-            {{ entry.medicineName }}, {{ entry.dosage }}, {{ entry.frequency }},
-            {{ entry.duration }}
-            @if (entry.specialInstructions) {
-              <span class="code">({{ entry.specialInstructions }})</span>
-            }
-          </li>
-        }
-      </ul>
-    }
   } @else {
+    @if (visit(); as current) {
+      <p class="modified">
+        {{ 'consultation.lastModified' | translate }}
+        <time [attr.datetime]="current.modifiedDate">
+          {{ current.modifiedDate | date: 'medium' }}
+        </time>
+      </p>
+    }
+
+    @if (notInProgress()) {
+      <p class="notice" role="status">{{ 'consultation.notes.completedEditable' | translate }}</p>
+    }
+
     <form (ngSubmit)="save()" novalidate>
       <section class="group" aria-labelledby="complaints-heading">
         <h2 id="complaints-heading">{{ 'consultation.notes.complaints' | translate }}</h2>
@@ -149,15 +119,17 @@
         >
           {{ 'consultation.notes.save' | translate }}
         </button>
-        <button
-          mat-flat-button
-          color="accent"
-          type="button"
-          [disabled]="complaints.invalid || diagnoses.invalid || medications.invalid || saving()"
-          (click)="completeVisit()"
-        >
-          {{ 'consultation.notes.complete' | translate }}
-        </button>
+        @if (!notInProgress()) {
+          <button
+            mat-flat-button
+            color="accent"
+            type="button"
+            [disabled]="complaints.invalid || diagnoses.invalid || medications.invalid || saving()"
+            (click)="completeVisit()"
+          >
+            {{ 'consultation.notes.complete' | translate }}
+          </button>
+        }
       </div>
 
       @if (saving()) {

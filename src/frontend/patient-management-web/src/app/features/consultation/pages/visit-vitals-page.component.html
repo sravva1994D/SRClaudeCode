@@ -14,34 +14,59 @@
   } @else if (visitMissing()) {
     <p class="error" role="alert">{{ 'consultation.vitals.visitMissing' | translate }}</p>
   } @else {
+    @if (visit(); as current) {
+      <p class="modified">
+        {{ 'consultation.lastModified' | translate }}
+        <time [attr.datetime]="current.modifiedDate">
+          {{ current.modifiedDate | date: 'medium' }}
+        </time>
+      </p>
+    }
+
     @if (recorded(); as vitals) {
-      @if (warnings().length > 0) {
-        <div class="warning-banner" role="status">
-          <p>{{ 'consultation.vitals.outsideNormal' | translate }} {{ warningLabels() }}</p>
+      @if (!editing()) {
+        @if (warnings().length > 0) {
+          <div class="warning-banner" role="status">
+            <p>{{ 'consultation.vitals.outsideNormal' | translate }} {{ warningLabels() }}</p>
+          </div>
+        }
+
+        <h2>{{ 'consultation.vitals.recordedTitle' | translate }}</h2>
+        <dl class="recorded">
+          <dt>{{ 'consultation.vitals.temperature' | translate }}</dt>
+          <dd>{{ vitals.temperature ?? ('consultation.vitals.notMeasured' | translate) }}</dd>
+
+          <dt>{{ 'consultation.vitals.systolic' | translate }}</dt>
+          <dd>
+            {{ vitals.bloodPressureSystolic ?? ('consultation.vitals.notMeasured' | translate) }}
+          </dd>
+
+          <dt>{{ 'consultation.vitals.diastolic' | translate }}</dt>
+          <dd>
+            {{ vitals.bloodPressureDiastolic ?? ('consultation.vitals.notMeasured' | translate) }}
+          </dd>
+
+          <dt>{{ 'consultation.vitals.pulse' | translate }}</dt>
+          <dd>{{ vitals.pulse ?? ('consultation.vitals.notMeasured' | translate) }}</dd>
+        </dl>
+
+        <div class="actions">
+          <button mat-stroked-button type="button" (click)="startEditing()">
+            {{ 'consultation.vitals.edit' | translate }}
+          </button>
         </div>
       }
+    }
 
-      <h2>{{ 'consultation.vitals.recordedTitle' | translate }}</h2>
-      <dl class="recorded">
-        <dt>{{ 'consultation.vitals.temperature' | translate }}</dt>
-        <dd>{{ vitals.temperature ?? ('consultation.vitals.notMeasured' | translate) }}</dd>
-
-        <dt>{{ 'consultation.vitals.systolic' | translate }}</dt>
-        <dd>
-          {{ vitals.bloodPressureSystolic ?? ('consultation.vitals.notMeasured' | translate) }}
-        </dd>
-
-        <dt>{{ 'consultation.vitals.diastolic' | translate }}</dt>
-        <dd>
-          {{ vitals.bloodPressureDiastolic ?? ('consultation.vitals.notMeasured' | translate) }}
-        </dd>
-
-        <dt>{{ 'consultation.vitals.pulse' | translate }}</dt>
-        <dd>{{ vitals.pulse ?? ('consultation.vitals.notMeasured' | translate) }}</dd>
-      </dl>
-    } @else if (notInProgress()) {
+    @if (!recorded() && notInProgress()) {
       <p class="notice" role="status">{{ 'consultation.vitals.notInProgress' | translate }}</p>
-    } @else {
+    } @else if (recorded() === null || editing()) {
+      <h2>
+        {{
+          (editing() ? 'consultation.vitals.editTitle' : 'consultation.vitals.enterTitle')
+            | translate
+        }}
+      </h2>
       <form [formGroup]="form" (ngSubmit)="save()" novalidate>
         <div class="grid">
           <mat-form-field appearance="outline">
@@ -104,8 +129,16 @@
             type="submit"
             [disabled]="form.invalid || saving()"
           >
-            {{ 'consultation.vitals.save' | translate }}
+            {{
+              (editing() ? 'consultation.vitals.saveChanges' : 'consultation.vitals.save')
+                | translate
+            }}
           </button>
+          @if (editing()) {
+            <button mat-button type="button" [disabled]="saving()" (click)="cancelEditing()">
+              {{ 'consultation.vitals.cancelEdit' | translate }}
+            </button>
+          }
         </div>
 
         @if (saving()) {

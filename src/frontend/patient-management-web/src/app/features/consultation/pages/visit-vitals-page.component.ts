@@ -8,6 +8,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -48,15 +49,16 @@ const SIGN_LABEL_KEYS: Readonly<Record<string, string>> = {
 };
 
 /**
- * Records the vitals for a visit. A value outside its normal range is saved and shown as a warning. A value outside
- * its plausible range is refused with an inline message, and nothing is saved. The server enforces both rules; the
- * form only checks that each entry can be stored.
+ * Records the vitals for a visit, and corrects them later at any visit status (plan item 38). A value outside its normal
+ * range is saved and shown as a warning. A value outside its plausible range is refused with an inline message, and
+ * nothing is saved. The server enforces both rules; the form only checks that each entry can be stored.
  */
 @Component({
   selector: 'app-visit-vitals-page',
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    DatePipe,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -85,6 +87,8 @@ export class VisitVitalsPageComponent implements OnInit, HasUnsavedChanges {
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
   readonly submitted = signal(false);
+  /** True while recorded vitals are open for correction in the form. */
+  readonly editing = signal(false);
 
   /** The names of the signs outside their normal range, translated, for the warning banner. */
   readonly warningLabels = computed(() =>
@@ -119,9 +123,33 @@ export class VisitVitalsPageComponent implements OnInit, HasUnsavedChanges {
     this.load();
   }
 
-  /** The entry form holds edits that are not saved. The recorded view has none. */
+  /** The entry form holds edits that are not saved. The read-only summary has none. */
   hasUnsavedChanges(): boolean {
-    return this.recorded() === null && this.form.dirty;
+    return (this.recorded() === null || this.editing()) && this.form.dirty;
+  }
+
+  /** Opens the recorded values in the form so they can be corrected. */
+  startEditing(): void {
+    const vitals = this.recorded();
+    if (vitals === null) {
+      return;
+    }
+    this.form.reset({
+      temperature: vitals.temperature,
+      bloodPressureSystolic: vitals.bloodPressureSystolic,
+      bloodPressureDiastolic: vitals.bloodPressureDiastolic,
+      pulse: vitals.pulse,
+    });
+    this.submitted.set(false);
+    this.saveError.set(null);
+    this.editing.set(true);
+  }
+
+  cancelEditing(): void {
+    this.form.reset();
+    this.submitted.set(false);
+    this.saveError.set(null);
+    this.editing.set(false);
   }
 
   save(): void {
@@ -135,29 +163,34 @@ export class VisitVitalsPageComponent implements OnInit, HasUnsavedChanges {
     }
 
     const visitId = Number(this.visitId());
+    const request = this.toRequest();
+    const correcting = this.recorded() !== null;
     this.saving.set(true);
     this.saveError.set(null);
-    this.vitalsService
-      .record(visitId, this.toRequest())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (response) => {
-          this.saving.set(false);
-          this.recorded.set(response.vitals);
-          this.warnings.set(response.warnings);
-          if (response.warnings.length === 0) {
-            this.notifications.showSuccess('consultation.vitals.saved');
-          }
-        },
-        error: (error: unknown) => {
-          this.saving.set(false);
-          this.saveError.set(this.recordErrorMessage(error));
-          // Someone else (or an earlier attempt) already saved vitals for this visit: show what is stored.
-          if (error instanceof ApiRequestError && error.code === 'vitals_already_recorded') {
-            this.load();
-          }
-        },
-      });
+    const save = correcting
+      ? this.vitalsService.update(visitId, request)
+      : this.vitalsService.record(visitId, request);
+    save.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (response) => {
+        this.saving.set(false);
+        this.recorded.set(response.vitals);
+        this.warnings.set(response.warnings);
+        this.editing.set(false);
+        this.form.reset();
+        this.refreshVisit();
+        if (response.warnings.length === 0) {
+          this.notifications.showSuccess('consultation.vitals.saved');
+        }
+      },
+      error: (error: unknown) => {
+        this.saving.set(false);
+        this.saveError.set(this.recordErrorMessage(error));
+        // Someone else (or an earlier attempt) already saved vitals for this visit: show what is stored.
+        if (error instanceof ApiRequestError && error.code === 'vitals_already_recorded') {
+          this.load();
+        }
+      },
+    });
   }
 
   private load(): void {
@@ -174,6 +207,21 @@ export class VisitVitalsPageComponent implements OnInit, HasUnsavedChanges {
         this.visitMissing.set(visit === null);
         this.visit.set(visit);
         this.recorded.set(vitals);
+      });
+  }
+
+  /** Re-reads only the visit, so the last-modified time follows a save without reloading the vitals. */
+  private refreshVisit(): void {
+    this.visits
+      .get(Number(this.visitId()))
+      .pipe(
+        catchError(() => of(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((visit) => {
+        if (visit !== null) {
+          this.visit.set(visit);
+        }
       });
   }
 

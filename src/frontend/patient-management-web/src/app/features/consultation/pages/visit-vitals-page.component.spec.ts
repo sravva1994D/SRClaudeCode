@@ -22,6 +22,7 @@ const VISIT: Visit = {
   patientId: 7,
   appointmentId: 3,
   statusId: VISIT_STATUS_IN_PROGRESS,
+  modifiedDate: '2026-11-12T10:20:30Z',
 };
 
 const SAVED: Vitals = {
@@ -38,11 +39,13 @@ describe('VisitVitalsPageComponent', () => {
   let getVisit: ReturnType<typeof vi.fn>;
   let getVitals: ReturnType<typeof vi.fn>;
   let record: ReturnType<typeof vi.fn>;
+  let update: ReturnType<typeof vi.fn>;
 
   function create(visit: Visit, vitals: Vitals | null): void {
     getVisit = vi.fn(() => of(visit));
     getVitals = vi.fn(() => (vitals === null ? throwError(() => new Error('404')) : of(vitals)));
     record = vi.fn();
+    update = vi.fn();
 
     TestBed.configureTestingModule({
       imports: [VisitVitalsPageComponent],
@@ -52,7 +55,7 @@ describe('VisitVitalsPageComponent', () => {
         provideNoopAnimations(),
         provideRouter([]),
         { provide: VisitsService, useValue: { get: getVisit } },
-        { provide: VitalsService, useValue: { get: getVitals, record } },
+        { provide: VitalsService, useValue: { get: getVitals, record, update } },
       ],
     });
 
@@ -93,6 +96,42 @@ describe('VisitVitalsPageComponent', () => {
 
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
     expect(fixture.nativeElement.querySelector('.notice')).not.toBeNull();
+  });
+
+  it('has unsaved changes while correcting recorded vitals only after the user types', () => {
+    create({ ...VISIT, statusId: VISIT_STATUS_COMPLETED }, SAVED);
+    const page = fixture.componentInstance;
+
+    page.startEditing();
+    expect(page.hasUnsavedChanges()).toBe(false);
+
+    page.form.controls.pulse.setValue(76);
+    page.form.controls.pulse.markAsDirty();
+    expect(page.hasUnsavedChanges()).toBe(true);
+  });
+
+  it('lets the doctor correct recorded vitals on a completed visit and shows the corrected values', () => {
+    create({ ...VISIT, statusId: VISIT_STATUS_COMPLETED }, SAVED);
+    expect(fixture.nativeElement.querySelector('form')).toBeNull();
+
+    fixture.componentInstance.startEditing();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.form.controls.pulse.value).toBe(130);
+
+    fixture.componentInstance.form.patchValue({ pulse: 76 });
+    update.mockReturnValue(of({ vitals: { ...SAVED, pulse: 76 }, warnings: [] }));
+    fixture.componentInstance.save();
+    fixture.detectChanges();
+
+    expect(update).toHaveBeenCalledWith(5, {
+      temperature: null,
+      bloodPressureSystolic: null,
+      bloodPressureDiastolic: null,
+      pulse: 76,
+    });
+    expect(record).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('form')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.recorded').textContent).toContain('76');
   });
 
   it('does not send a request when no value is entered', () => {
