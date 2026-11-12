@@ -42,10 +42,13 @@ public sealed class SqlAppointmentRepository(
         """;
 
     // The calendar's range read. Uses the slot index for the range and joins the name only for the rows returned.
+    // The visit join is LEFT because most appointments have no visit; UX_Visits_AppointmentId allows at most one
+    // active visit per appointment, so the join never repeats a row.
     private const string ListBetweenSql = """
-        SELECT a.AppointmentId, a.PatientId, p.FullName, a.SlotStart, a.AppointmentStatusId
+        SELECT a.AppointmentId, a.PatientId, p.FullName, a.SlotStart, a.AppointmentStatusId, v.VisitId
         FROM dbo.Appointments AS a
         INNER JOIN dbo.Patients AS p ON p.PatientId = a.PatientId
+        LEFT JOIN dbo.Visits AS v ON v.AppointmentId = a.AppointmentId AND v.IsActive = 1
         WHERE a.IsActive = 1
           AND p.IsActive = 1
           AND a.SlotStart >= @FromUtc
@@ -106,7 +109,8 @@ public sealed class SqlAppointmentRepository(
                 reader.GetInt32(1),
                 reader.GetString(2),
                 DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc),
-                reader.GetInt32(4)));
+                reader.GetInt32(4),
+                reader.IsDBNull(5) ? null : reader.GetInt32(5)));
         }
 
         return items;

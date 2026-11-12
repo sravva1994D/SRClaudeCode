@@ -12,6 +12,7 @@ function item(id: number, when: Date, statusId = 1): AppointmentListItem {
     patientFullName: `Patient ${id}`,
     slotStartUtc: when.toISOString(),
     statusId,
+    visitId: null,
   };
 }
 

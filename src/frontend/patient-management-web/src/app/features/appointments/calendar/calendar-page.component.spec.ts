@@ -30,6 +30,7 @@ describe('CalendarPageComponent', () => {
         0,
       ).toISOString(),
       statusId: 1,
+      visitId: null,
     };
     list = vi.fn(() => of([booked]));
 
