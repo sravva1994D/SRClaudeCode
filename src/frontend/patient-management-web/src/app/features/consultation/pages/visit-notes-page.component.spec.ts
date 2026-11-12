@@ -107,6 +107,18 @@ describe('VisitNotesPageComponent', () => {
     expect(page.diagnoses.at(0).getRawValue()).toEqual({ text: 'Viral fever', code: 'J11' });
   });
 
+  it('saves the drafts from the form submit without a native page submission', () => {
+    create(IN_PROGRESS, EMPTY_NOTES);
+    fixture.componentInstance.addComplaint('Fever');
+    fixture.detectChanges();
+    const submit = new Event('submit', { cancelable: true });
+
+    fixture.nativeElement.querySelector('form').dispatchEvent(submit);
+
+    expect(submit.defaultPrevented).toBe(true);
+    expect(saveComplaints).toHaveBeenCalledWith(5, ['Fever']);
+  });
+
   it('saves trimmed entries and drops the blank ones', () => {
     create(IN_PROGRESS, EMPTY_NOTES);
     const page = fixture.componentInstance;
