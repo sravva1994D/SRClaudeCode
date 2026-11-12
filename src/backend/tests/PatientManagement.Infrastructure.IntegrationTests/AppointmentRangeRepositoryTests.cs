@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using PatientManagement.Application.Interfaces;
 using PatientManagement.Domain.Appointments;
 using PatientManagement.Domain.Patients;
+using PatientManagement.Domain.Visits;
 using PatientManagement.Infrastructure.Auditing;
 using PatientManagement.Infrastructure.IntegrationTests.Support;
 using PatientManagement.Infrastructure.Persistence;
@@ -36,6 +37,32 @@ public sealed class AppointmentRangeRepositoryTests
 
         items.Select(item => item.PatientFullName).Should().Equal("Asha Rao", "Vikram Shah");
         items.Select(item => item.SlotStartUtc.Kind).Should().OnlyContain(kind => kind == DateTimeKind.Utc);
+        items.Select(item => item.VisitId).Should().OnlyContain(visitId => visitId == null, "no visit has started");
+    }
+
+    [Fact]
+    public async Task ListActiveBetweenAsync_AppointmentWithAVisit_ReturnsTheVisitId()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await TestMigrations.ApplyAllAsync(database);
+        await SqlQuery.ExecuteAsync(database.ConnectionString, InsertDoctorSql);
+        var (unitOfWork, patients, appointments) = Create(database);
+        var asha = await AddPatientAsync(unitOfWork, patients, "Asha Rao");
+        await BookAsync(unitOfWork, appointments, asha, new DateTime(2026, 11, 10, 9, 0, 0, DateTimeKind.Utc));
+        var from = new DateTime(2026, 11, 10, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 11, 11, 0, 0, 0, DateTimeKind.Utc);
+        var appointmentId = (await appointments.ListActiveBetweenAsync(from, to, CancellationToken.None)).Single().AppointmentId;
+        var visit = Visit.Start(asha, appointmentId);
+        var visits = new SqlVisitRepository(
+            new SqlAuditLogWriter(new SystemClock(), Options.Create(new DatabaseOptions { ConnectionString = database.ConnectionString })),
+            new SystemClock(),
+            new SqlConnectionFactory(Options.Create(new DatabaseOptions { ConnectionString = database.ConnectionString })),
+            Options.Create(new DatabaseOptions { ConnectionString = database.ConnectionString }));
+        await unitOfWork.ExecuteAsync(token => visits.AddAsync(visit, 1, token), CancellationToken.None);
+
+        var items = await appointments.ListActiveBetweenAsync(from, to, CancellationToken.None);
+
+        items.Should().ContainSingle().Which.VisitId.Should().Be(visit.VisitId);
     }
 
     private static async Task BookAsync(IUnitOfWork unitOfWork, IAppointmentRepository appointments, int patientId, DateTime slot) =>

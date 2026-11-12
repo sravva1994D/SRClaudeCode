@@ -19,13 +19,20 @@ describe('DashboardPageComponent', () => {
   let appointments: ReturnType<typeof vi.fn>;
   let startVisit: ReturnType<typeof vi.fn>;
 
-  function item(id: number, when: Date, statusId: number, name: string): AppointmentListItem {
+  function item(
+    id: number,
+    when: Date,
+    statusId: number,
+    name: string,
+    visitId: number | null = null,
+  ): AppointmentListItem {
     return {
       appointmentId: id,
       patientId: id,
       patientFullName: name,
       slotStartUtc: when.toISOString(),
       statusId,
+      visitId,
     };
   }
 
@@ -110,6 +117,27 @@ describe('DashboardPageComponent', () => {
 
     expect(startVisit).toHaveBeenCalledWith(1);
     expect(navigate).toHaveBeenCalledWith(['/consultation/visits', 9, 'vitals']);
+  });
+
+  it('opens the existing visit instead of offering to start a second one', () => {
+    const today = new Date();
+    appointments.mockReturnValue(
+      of([
+        item(
+          1,
+          new Date(today.getFullYear(), today.getMonth(), today.getDate(), 15, 0),
+          APPOINTMENT_STATUS_SCHEDULED,
+          'Today Patient',
+          7,
+        ),
+      ]),
+    );
+
+    createPage();
+
+    expect(fixture.nativeElement.querySelector('.agenda button')).toBeNull();
+    const link = fixture.nativeElement.querySelector('.agenda a.open-visit') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/consultation/visits/7/vitals');
   });
 
   it('starts a visit only once while the first request is in flight', () => {

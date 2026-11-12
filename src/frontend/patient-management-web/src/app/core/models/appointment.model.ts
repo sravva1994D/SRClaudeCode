@@ -5,6 +5,8 @@ export interface AppointmentListItem {
   patientFullName: string;
   slotStartUtc: string;
   statusId: number;
+  /** The active visit started from this appointment, or null when none has started. */
+  visitId: number | null;
 }
 
 /** The appointment as the booking endpoint returns it. It has no patient name. */
