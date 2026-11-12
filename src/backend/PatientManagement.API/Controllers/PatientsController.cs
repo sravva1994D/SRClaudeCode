@@ -1,6 +1,8 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PatientManagement.Application.Appointments;
+using PatientManagement.Application.Appointments.Handlers;
 using PatientManagement.Application.Interfaces;
 using PatientManagement.Application.Paging;
 using PatientManagement.Application.Patients;
@@ -25,8 +27,30 @@ public sealed class PatientsController(
     IValidator<SearchPatientsQuery> searchValidator,
     ListRecentPatientsQueryHandler listRecent,
     RecordPatientViewedCommandHandler recordViewed,
+    PatientAppointmentHistoryHandler appointmentHistory,
+    IValidator<PatientAppointmentHistoryQuery> appointmentHistoryValidator,
     ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Returns one page of the patient's appointments, newest first, with every status. Paging uses page and pageSize
+    /// (page size is at most 100).
+    /// </summary>
+    [HttpGet("{patientId:int}/appointments")]
+    [ProducesResponseType<PagedResponse<PatientAppointmentHistoryItem>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PagedResponse<PatientAppointmentHistoryItem>>> AppointmentHistory(
+        int patientId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PagingLimits.DefaultPageSize)
+    {
+        var query = new PatientAppointmentHistoryQuery(patientId, page, pageSize);
+        await appointmentHistoryValidator.ValidateAndThrowAsync(query, HttpContext.RequestAborted);
+
+        return Ok(await appointmentHistory.HandleAsync(query, HttpContext.RequestAborted));
+    }
+
     /// <summary>Returns the patients the signed-in user opened most recently, newest first.</summary>
     [HttpGet("recent")]
     [ProducesResponseType<IReadOnlyList<PatientListItem>>(StatusCodes.Status200OK)]

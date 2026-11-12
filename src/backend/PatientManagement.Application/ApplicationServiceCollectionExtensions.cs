@@ -46,6 +46,10 @@ public static class ApplicationServiceCollectionExtensions
 
         services.AddScoped<Appointments.RescheduleAppointmentCommandHandler>();
         services.AddScoped<Appointments.ChangeAppointmentStatusCommandHandler>();
-        services.AddScoped<IValidator<Appointments.RescheduleAppointmentCommand>, Validators.RescheduleAppointmentCommandValidator>();        return services;
+        services.AddScoped<IValidator<Appointments.RescheduleAppointmentCommand>, Validators.RescheduleAppointmentCommandValidator>();
+
+        services.AddScoped<Appointments.Handlers.PatientAppointmentHistoryHandler>();
+        services.AddScoped<IValidator<Appointments.PatientAppointmentHistoryQuery>, Validators.PatientAppointmentHistoryValidator>();
+        return services;
     }
 }

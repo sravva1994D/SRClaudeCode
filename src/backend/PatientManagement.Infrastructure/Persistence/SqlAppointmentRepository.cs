@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using PatientManagement.Application.Appointments;
 using PatientManagement.Application.Auditing;
 using PatientManagement.Application.Interfaces;
+using PatientManagement.Application.Paging;
 using PatientManagement.Domain.Appointments;
 using PatientManagement.Domain.Exceptions;
 
@@ -50,6 +51,19 @@ public sealed class SqlAppointmentRepository(
           AND a.SlotStart >= @FromUtc
           AND a.SlotStart < @ToUtc
         ORDER BY a.SlotStart, a.AppointmentId;
+        """;
+
+    // The count and the page share one filter, so the total always matches the rows that can be paged through.
+    // The index IX_Appointments_PatientId_SlotStart serves both.
+    private const string PatientHistorySql = """
+        SELECT COUNT(*) FROM dbo.Appointments
+        WHERE PatientId = @PatientId AND IsActive = 1;
+
+        SELECT AppointmentId, SlotStart, AppointmentStatusId
+        FROM dbo.Appointments
+        WHERE PatientId = @PatientId AND IsActive = 1
+        ORDER BY SlotStart DESC, AppointmentId DESC
+        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
         """;
 
     // The filtered unique index UX_Appointments_SlotStart rejects a second active booking for the same slot.
@@ -138,6 +152,37 @@ public sealed class SqlAppointmentRepository(
                 appointment.AuditValues(),
                 changedByUserId),
             cancellationToken);
+    }
+
+    public async Task<PagedResponse<PatientAppointmentHistoryItem>> ListForPatientAsync(
+        int patientId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = PatientHistorySql;
+        command.CommandTimeout = options.Value.CommandTimeoutSeconds;
+        command.Parameters.Add(new SqlParameter("@PatientId", patientId));
+        command.Parameters.Add(new SqlParameter("@Offset", (pageNumber - 1) * pageSize));
+        command.Parameters.Add(new SqlParameter("@PageSize", pageSize));
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        await reader.ReadAsync(cancellationToken);
+        var totalCount = reader.GetInt32(0);
+
+        await reader.NextResultAsync(cancellationToken);
+        var items = new List<PatientAppointmentHistoryItem>();
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            items.Add(new PatientAppointmentHistoryItem(
+                reader.GetInt32(0),
+                DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc),
+                reader.GetInt32(2)));
+        }
+
+        return new PagedResponse<PatientAppointmentHistoryItem>(items, totalCount, pageNumber, pageSize);
     }
 
     public async Task AddAsync(Appointment appointment, int changedByUserId, CancellationToken cancellationToken)
