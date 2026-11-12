@@ -150,6 +150,8 @@
   "consultation.notes.remove": "Remove",
   "consultation.notes.save": "Save draft",
   "consultation.notes.saved": "Draft saved.",
+  "consultation.notes.complete": "Complete visit",
+  "consultation.notes.completed": "Visit completed.",
   "consultation.notes.none": "Nothing recorded.",
   "consultation.notes.notInProgress": "Notes can be changed only while the visit is in progress.",
   "consultation.notes.textTooLong": "Use at most 2000 characters.",

@@ -46,11 +46,13 @@ describe('VisitNotesPageComponent', () => {
   let saveComplaints: ReturnType<typeof vi.fn>;
   let saveDiagnoses: ReturnType<typeof vi.fn>;
   let saveMedications: ReturnType<typeof vi.fn>;
+  let complete: ReturnType<typeof vi.fn>;
 
   function create(visit: Visit, notes: VisitNotes | null): void {
     saveComplaints = vi.fn(() => of(undefined));
     saveDiagnoses = vi.fn(() => of(undefined));
     saveMedications = vi.fn(() => of(undefined));
+    complete = vi.fn(() => of({ ...visit, statusId: VISIT_STATUS_COMPLETED }));
 
     TestBed.configureTestingModule({
       imports: [VisitNotesPageComponent],
@@ -59,7 +61,7 @@ describe('VisitNotesPageComponent', () => {
         provideHttpClientTesting(),
         provideNoopAnimations(),
         provideRouter([]),
-        { provide: VisitsService, useValue: { get: vi.fn(() => of(visit)) } },
+        { provide: VisitsService, useValue: { get: vi.fn(() => of(visit)), complete } },
         {
           provide: VisitNotesService,
           useValue: {
@@ -151,6 +153,41 @@ describe('VisitNotesPageComponent', () => {
         specialInstructions: null,
       },
     ]);
+  });
+
+  it('saves the drafts and then completes the visit', () => {
+    create(IN_PROGRESS, EMPTY_NOTES);
+    const page = fixture.componentInstance;
+    page.addComplaint('Fever');
+
+    page.completeVisit();
+
+    expect(saveComplaints).toHaveBeenCalledWith(5, ['Fever']);
+    expect(complete).toHaveBeenCalledWith(5);
+  });
+
+  it('shows the refusal inline and leaves the visit open when it has no vitals', () => {
+    create(IN_PROGRESS, EMPTY_NOTES);
+    complete.mockReturnValue(
+      throwError(
+        () =>
+          new ApiRequestError(
+            'business',
+            422,
+            'vitals_required',
+            'Record the vitals before completing the visit.',
+            null,
+          ),
+      ),
+    );
+
+    fixture.componentInstance.completeVisit();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain(
+      'Record the vitals before completing the visit.',
+    );
+    expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
   });
 
   it('shows the saved notes read-only, with no form, once the visit is no longer in progress', () => {

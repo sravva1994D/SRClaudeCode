@@ -55,6 +55,16 @@ public sealed class Visit
         }
     }
 
+    /// <summary>
+    /// Completes an in-progress visit. The caller checks the visit's required records (vitals) and completes the
+    /// appointment in the same unit of work, so a failure at any step leaves the visit in progress.
+    /// </summary>
+    public void Complete()
+    {
+        EnsureInProgress();
+        StatusId = VisitStatuses.Completed;
+    }
+
     /// <summary>Starts a visit in progress. The appointment's own rules are checked by the appointment first.</summary>
     public static Visit Start(int patientId, int appointmentId) =>
         new(0, patientId, appointmentId, VisitStatuses.InProgress, isActive: true, Array.Empty<byte>());
