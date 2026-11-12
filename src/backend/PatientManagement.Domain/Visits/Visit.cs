@@ -1,3 +1,5 @@
+using PatientManagement.Domain.Exceptions;
+
 namespace PatientManagement.Domain.Visits;
 
 /// <summary>Visit status ids, matching the seeded VisitStatuses table (migration V0014).</summary>
@@ -40,6 +42,18 @@ public sealed class Visit
     public bool IsActive { get; private set; }
 
     public byte[] RowVersion { get; private set; }
+
+    /// <summary>
+    /// Vitals are recorded only while the visit is in progress. A completed visit is changed through the edit rules
+    /// instead (plan Sprint 7–8, item 38).
+    /// </summary>
+    public void EnsureInProgress()
+    {
+        if (StatusId != VisitStatuses.InProgress)
+        {
+            throw new DomainException("visit_not_in_progress", "This visit is no longer in progress.");
+        }
+    }
 
     /// <summary>Starts a visit in progress. The appointment's own rules are checked by the appointment first.</summary>
     public static Visit Start(int patientId, int appointmentId) =>
