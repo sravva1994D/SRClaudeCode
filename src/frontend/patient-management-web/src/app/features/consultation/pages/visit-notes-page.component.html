@@ -27,7 +27,7 @@
       <p class="notice" role="status">{{ 'consultation.notes.completedEditable' | translate }}</p>
     }
 
-    <form (ngSubmit)="save()" novalidate>
+    <form (submit)="submitDrafts($event)" novalidate>
       <section class="group" aria-labelledby="complaints-heading">
         <h2 id="complaints-heading">{{ 'consultation.notes.complaints' | translate }}</h2>
         @for (control of complaints.controls; track $index) {

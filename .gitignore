@@ -30,3 +30,7 @@ secrets.json
 
 # Not part of the product
 Reference/
+
+# Playwright output (E2E runs)
+test-results/
+playwright-report/

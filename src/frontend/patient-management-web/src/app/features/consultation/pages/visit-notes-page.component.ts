@@ -183,6 +183,15 @@ export class VisitNotesPageComponent implements OnInit, HasUnsavedChanges {
     this.submit(false);
   }
 
+  /**
+   * The form has no formGroup directive, so the browser would submit it natively and reload the page, losing the
+   * unsaved entries. Saving the drafts is handled here instead.
+   */
+  submitDrafts(event: Event): void {
+    event.preventDefault();
+    this.save();
+  }
+
   /** Saves the drafts, then completes the visit, so unsaved edits are not lost when the visit closes. */
   completeVisit(): void {
     this.submit(true);
