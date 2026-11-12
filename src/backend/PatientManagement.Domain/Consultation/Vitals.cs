@@ -107,21 +107,33 @@ public sealed class Vitals
         IReadOnlyDictionary<string, VitalRange> ranges,
         out IReadOnlyList<string> warnings)
     {
-        var implausible = new List<string>();
-        var abnormal = new List<string>();
-
-        Check(VitalSigns.Temperature, temperature, ranges, implausible, abnormal);
-        Check(VitalSigns.BloodPressureSystolic, bloodPressureSystolic, ranges, implausible, abnormal);
-        Check(VitalSigns.BloodPressureDiastolic, bloodPressureDiastolic, ranges, implausible, abnormal);
-        Check(VitalSigns.Pulse, pulse, ranges, implausible, abnormal);
-
-        if (implausible.Count > 0)
-        {
-            throw new VitalsImplausibleException(implausible);
-        }
-
-        warnings = abnormal;
+        warnings = CheckValues(temperature, bloodPressureSystolic, bloodPressureDiastolic, pulse, ranges);
         return new Vitals(0, visitId, temperature, bloodPressureSystolic, bloodPressureDiastolic, pulse, isActive: true, Array.Empty<byte>());
+    }
+
+    /// <summary>
+    /// Replaces the recorded values with a correction (plan item 38). The same range rules apply as when recording.
+    /// Returns true when any value changed, so an unchanged correction writes nothing.
+    /// </summary>
+    public bool Revise(
+        decimal? temperature,
+        int? bloodPressureSystolic,
+        int? bloodPressureDiastolic,
+        int? pulse,
+        IReadOnlyDictionary<string, VitalRange> ranges,
+        out IReadOnlyList<string> warnings)
+    {
+        warnings = CheckValues(temperature, bloodPressureSystolic, bloodPressureDiastolic, pulse, ranges);
+
+        var changed = Temperature != temperature
+            || BloodPressureSystolic != bloodPressureSystolic
+            || BloodPressureDiastolic != bloodPressureDiastolic
+            || Pulse != pulse;
+        Temperature = temperature;
+        BloodPressureSystolic = bloodPressureSystolic;
+        BloodPressureDiastolic = bloodPressureDiastolic;
+        Pulse = pulse;
+        return changed;
     }
 
     /// <summary>Rebuilds vitals from a stored row.</summary>
@@ -152,6 +164,29 @@ public sealed class Vitals
         ["Pulse"] = Pulse,
         ["IsActive"] = IsActive,
     };
+
+    private static List<string> CheckValues(
+        decimal? temperature,
+        int? bloodPressureSystolic,
+        int? bloodPressureDiastolic,
+        int? pulse,
+        IReadOnlyDictionary<string, VitalRange> ranges)
+    {
+        var implausible = new List<string>();
+        var abnormal = new List<string>();
+
+        Check(VitalSigns.Temperature, temperature, ranges, implausible, abnormal);
+        Check(VitalSigns.BloodPressureSystolic, bloodPressureSystolic, ranges, implausible, abnormal);
+        Check(VitalSigns.BloodPressureDiastolic, bloodPressureDiastolic, ranges, implausible, abnormal);
+        Check(VitalSigns.Pulse, pulse, ranges, implausible, abnormal);
+
+        if (implausible.Count > 0)
+        {
+            throw new VitalsImplausibleException(implausible);
+        }
+
+        return abnormal;
+    }
 
     private static void Check(
         string sign,

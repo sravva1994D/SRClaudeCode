@@ -58,6 +58,39 @@ public sealed class VitalsTests
     }
 
     [Fact]
+    public void Revise_ChangedValue_UpdatesTheValueAndReportsTheChange()
+    {
+        var vitals = Vitals.Reconstitute(1, 3, null, null, null, 72, true, [1]);
+
+        var changed = vitals.Revise(null, null, null, 80, Ranges, out var warnings);
+
+        changed.Should().BeTrue();
+        vitals.Pulse.Should().Be(80);
+        warnings.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Revise_SameValues_ReportsNoChange()
+    {
+        var vitals = Vitals.Reconstitute(1, 3, null, null, null, 72, true, [1]);
+
+        var changed = vitals.Revise(null, null, null, 72, Ranges, out _);
+
+        changed.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Revise_ImplausibleValue_ThrowsAndKeepsTheRecordedValue()
+    {
+        var vitals = Vitals.Reconstitute(1, 3, null, null, null, 72, true, [1]);
+
+        var act = () => vitals.Revise(null, null, null, 10, Ranges, out _);
+
+        act.Should().Throw<VitalsImplausibleException>();
+        vitals.Pulse.Should().Be(72);
+    }
+
+    [Fact]
     public void EnsureInProgress_CompletedVisit_ThrowsNotInProgress()
     {
         var visit = Visit.Reconstitute(1, 7, 5, VisitStatuses.Completed, true, [1]);

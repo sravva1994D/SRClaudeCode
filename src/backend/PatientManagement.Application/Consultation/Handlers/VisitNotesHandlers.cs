@@ -5,8 +5,8 @@ using PatientManagement.Domain.Exceptions;
 namespace PatientManagement.Application.Consultation.Handlers;
 
 /// <summary>
-/// Replaces a visit's complaints with the draft. The visit row is locked and its status checked again inside the unit
-/// of work, so a save cannot race a completed visit. An unchanged draft writes nothing.
+/// Replaces a visit's complaints with the draft. The visit row is locked so saves for one visit run in order. Notes can be
+/// edited at any visit status (Q2). An unchanged draft writes nothing; a change stamps the visit's last-modified time.
 /// </summary>
 public sealed class SaveComplaintsCommandHandler(
     IUnitOfWork unitOfWork,
@@ -18,7 +18,6 @@ public sealed class SaveComplaintsCommandHandler(
         {
             var visit = await visits.FindActiveForUpdateAsync(command.VisitId, token)
                 ?? throw new RecordNotFoundException("Visit");
-            visit.EnsureInProgress();
 
             var wanted = (command.Complaints ?? Array.Empty<string>())
                 .Select(text => (text ?? string.Empty).Trim())
@@ -41,6 +40,8 @@ public sealed class SaveComplaintsCommandHandler(
                 var complaint = Complaint.Record(visit.VisitId, wanted[index], index);
                 await complaints.AddAsync(complaint, command.ChangedByUserId, token);
             }
+
+            await visits.MarkModifiedAsync(visit, command.ChangedByUserId, token);
         }, cancellationToken);
 }
 
@@ -58,7 +59,6 @@ public sealed class SaveDiagnosesCommandHandler(
         {
             var visit = await visits.FindActiveForUpdateAsync(command.VisitId, token)
                 ?? throw new RecordNotFoundException("Visit");
-            visit.EnsureInProgress();
 
             var wanted = (command.Diagnoses ?? Array.Empty<DiagnosisEntry>())
                 .Where(entry => !string.IsNullOrWhiteSpace(entry.Text))
@@ -82,6 +82,8 @@ public sealed class SaveDiagnosesCommandHandler(
                 var diagnosis = Diagnosis.Record(visit.VisitId, wanted[index].Text!, wanted[index].Code, index);
                 await diagnoses.AddAsync(diagnosis, command.ChangedByUserId, token);
             }
+
+            await visits.MarkModifiedAsync(visit, command.ChangedByUserId, token);
         }, cancellationToken);
 
     private static string? TrimmedCode(string? code)

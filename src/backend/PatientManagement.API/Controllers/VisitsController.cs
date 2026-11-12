@@ -20,6 +20,7 @@ public sealed class VisitsController(
     GetVisitQueryHandler getVisit,
     RecordVitalsCommandHandler recordVitals,
     GetVitalsQueryHandler getVitals,
+    UpdateVitalsCommandHandler updateVitals,
     SaveComplaintsCommandHandler saveComplaints,
     IValidator<SaveComplaintsCommand> saveComplaintsValidator,
     SaveDiagnosesCommandHandler saveDiagnoses,
@@ -75,6 +76,33 @@ public sealed class VisitsController(
     public async Task<ActionResult<VitalsDetails>> GetVitals(int visitId, CancellationToken cancellationToken) =>
         Ok(await getVitals.HandleAsync(new GetVitalsQuery(visitId), cancellationToken));
 
+    /// <summary>
+    /// Corrects the vitals already recorded for the visit, at any visit status. The range rules are the same as for
+    /// recording: an impossible value returns 400 with code <c>vitals_implausible</c>; an abnormal value is saved and
+    /// returned in <c>warnings</c>. A visit with no vitals returns 404. Each correction is audited field by field.
+    /// </summary>
+    [HttpPut("{visitId:int}/vitals")]
+    [ProducesResponseType<RecordVitalsResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<RecordVitalsResponse>> UpdateVitals(
+        int visitId,
+        [FromBody] RecordVitalsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateVitalsCommand(
+            visitId,
+            request.Temperature,
+            request.BloodPressureSystolic,
+            request.BloodPressureDiastolic,
+            request.Pulse,
+            currentUser.UserId);
+        var result = await updateVitals.HandleAsync(command, cancellationToken);
+        return Ok(new RecordVitalsResponse(result.Vitals, result.Warnings));
+    }
+
     /// <summary>Returns the complaints and diagnoses saved for the visit.</summary>
     [HttpGet("{visitId:int}/notes")]
     [ProducesResponseType<VisitNotesDetails>(StatusCodes.Status200OK)]
@@ -85,7 +113,7 @@ public sealed class VisitsController(
 
     /// <summary>
     /// Saves the visit's complaints as a draft: the list replaces the saved complaints. Blank entries are dropped. An
-    /// unchanged list writes nothing. A visit that is not in progress returns 422.
+    /// unchanged list writes nothing. Notes can be saved at any visit status.
     /// </summary>
     [HttpPut("{visitId:int}/complaints")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -106,7 +134,7 @@ public sealed class VisitsController(
 
     /// <summary>
     /// Saves the visit's diagnoses as a draft: the list replaces the saved diagnoses. Entries with blank text are dropped.
-    /// An unchanged list writes nothing. A visit that is not in progress returns 422.
+    /// An unchanged list writes nothing. Notes can be saved at any visit status.
     /// </summary>
     [HttpPut("{visitId:int}/diagnoses")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -128,8 +156,8 @@ public sealed class VisitsController(
 
     /// <summary>
     /// Saves the visit's medications as a draft: the list replaces the saved medications. An entry with a blank name is
-    /// dropped; an entry missing its dosage, frequency or duration returns 422. An unchanged list writes nothing. A visit
-    /// that is not in progress returns 422.
+    /// dropped; an entry missing its dosage, frequency or duration returns 422. An unchanged list writes nothing. Medications
+    /// can be saved at any visit status.
     /// </summary>
     [HttpPut("{visitId:int}/medications")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

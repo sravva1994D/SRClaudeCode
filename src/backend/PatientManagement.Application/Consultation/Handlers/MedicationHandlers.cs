@@ -5,9 +5,9 @@ using PatientManagement.Domain.Exceptions;
 namespace PatientManagement.Application.Consultation.Handlers;
 
 /// <summary>
-/// Replaces a visit's medications with the draft. The visit row is locked and its status checked inside the unit of work.
-/// Each entry is checked by the domain (required fields), so an incomplete medicine is refused before anything is written.
-/// An unchanged draft writes nothing.
+/// Replaces a visit's medications with the draft. The visit row is locked so saves for one visit run in order, and medications
+/// can be edited at any visit status (Q2). Each entry is checked by the domain (required fields), so an incomplete medicine
+/// is refused before anything is written. An unchanged draft writes nothing; a change stamps the visit's last-modified time.
 /// </summary>
 public sealed class SaveMedicationsCommandHandler(
     IUnitOfWork unitOfWork,
@@ -19,7 +19,6 @@ public sealed class SaveMedicationsCommandHandler(
         {
             var visit = await visits.FindActiveForUpdateAsync(command.VisitId, token)
                 ?? throw new RecordNotFoundException("Visit");
-            visit.EnsureInProgress();
 
             var wanted = (command.Medications ?? Array.Empty<MedicationEntry>())
                 .Where(entry => !string.IsNullOrWhiteSpace(entry.MedicineName))
@@ -49,6 +48,8 @@ public sealed class SaveMedicationsCommandHandler(
             {
                 await medications.AddAsync(medication, command.ChangedByUserId, token);
             }
+
+            await visits.MarkModifiedAsync(visit, command.ChangedByUserId, token);
         }, cancellationToken);
 
     private static (string Name, string Dosage, string Frequency, string Duration, string? Instructions) Key(Medication medication) =>

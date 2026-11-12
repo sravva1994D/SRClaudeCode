@@ -50,6 +50,37 @@ public sealed class VitalsRepositoryTests
     }
 
     [Fact]
+    public async Task SaveChangesAsync_OnlyPulseChanged_AuditRowHoldsOnlyThePulse()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await TestMigrations.ApplyAllAsync(database);
+        await SqlQuery.ExecuteAsync(database.ConnectionString, InsertDoctorSql);
+        var options = Options.Create(new DatabaseOptions { ConnectionString = database.ConnectionString });
+        var clock = new SystemClock();
+        var audit = new SqlAuditLogWriter(clock, options);
+        var connectionFactory = new SqlConnectionFactory(options);
+        var unitOfWork = new SqlUnitOfWork(connectionFactory);
+        var visitId = await StartVisitAsync(unitOfWork, connectionFactory, options, audit, clock);
+        var vitals = new SqlVitalsRepository(audit, clock, connectionFactory, options);
+        var recorded = Vitals.Record(visitId, 36.6m, 120, 80, 72, NoRanges(), out _);
+        await unitOfWork.ExecuteAsync(token => vitals.AddAsync(recorded, 1, token), CancellationToken.None);
+
+        await unitOfWork.ExecuteAsync(async token =>
+        {
+            var before = recorded.AuditValues();
+            recorded.Revise(36.6m, 120, 80, 76, NoRanges(), out _);
+            await vitals.SaveChangesAsync(recorded, before, 1, token);
+        }, CancellationToken.None);
+
+        var oldValues = await SqlQuery.ScalarStringAsync(
+            database.ConnectionString,
+            "SELECT OldValues FROM dbo.AuditLogs WHERE TableName = N'Vitals' AND Action = N'Update';");
+        oldValues.Should().Be("{\"Pulse\":72}");
+        var stored = await vitals.FindActiveForVisitAsync(visitId, CancellationToken.None);
+        stored!.Pulse.Should().Be(76);
+    }
+
+    [Fact]
     public async Task GetActiveAsync_TestRangeRow_IsReadBack()
     {
         await using var database = await TestDatabase.CreateAsync();

@@ -69,6 +69,15 @@ public sealed class SqlVitalsRepository(
         VALUES (@VisitId, @Temperature, @Systolic, @Diastolic, @Pulse, @ChangedBy, @ModifiedDate, @ChangedBy);
         """;
 
+    // The row version check makes a correction fail when the vitals changed since they were read (CLAUDE.md 6.3).
+    private const string UpdateSql = """
+        UPDATE dbo.Vitals
+        SET Temperature = @Temperature, BloodPressureSystolic = @Systolic, BloodPressureDiastolic = @Diastolic,
+            Pulse = @Pulse, ModifiedDate = @ModifiedDate, ModifiedBy = @ChangedBy
+        OUTPUT inserted.RowVersion
+        WHERE VitalsId = @VitalsId AND IsActive = 1 AND RowVersion = @RowVersion;
+        """;
+
     public async Task<Vitals?> FindActiveForVisitAsync(int visitId, CancellationToken cancellationToken)
     {
         var scope = UnitOfWorkScope.TryGetCurrent();
@@ -118,6 +127,40 @@ public sealed class SqlVitalsRepository(
                 vitals.VitalsId.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 AuditAction.Create,
                 OldValues: null,
+                NewValues: vitals.AuditValues(),
+                changedByUserId),
+            cancellationToken);
+    }
+
+    public async Task SaveChangesAsync(
+        Vitals vitals,
+        IReadOnlyDictionary<string, object?> auditValuesBefore,
+        int changedByUserId,
+        CancellationToken cancellationToken)
+    {
+        var scope = UnitOfWorkScope.Current;
+        await using var command = scope.Connection.CreateCommand();
+        command.CommandText = UpdateSql;
+        command.CommandTimeout = options.Value.CommandTimeoutSeconds;
+        command.Transaction = scope.Transaction;
+        command.Parameters.Add(new SqlParameter("@VitalsId", vitals.VitalsId));
+        command.Parameters.Add(new SqlParameter("@RowVersion", vitals.RowVersion));
+        command.Parameters.Add(new SqlParameter("@Temperature", (object?)vitals.Temperature ?? DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Systolic", (object?)vitals.BloodPressureSystolic ?? DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Diastolic", (object?)vitals.BloodPressureDiastolic ?? DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Pulse", (object?)vitals.Pulse ?? DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@ChangedBy", changedByUserId));
+        command.Parameters.Add(new SqlParameter("@ModifiedDate", clock.UtcNow));
+
+        var newRowVersion = await command.ExecuteScalarAsync(cancellationToken) as byte[];
+        vitals.SetRowVersion(newRowVersion ?? throw new ConcurrencyConflictException(TableName));
+
+        await auditLogWriter.WriteAsync(
+            new AuditEntry(
+                TableName,
+                vitals.VitalsId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                AuditAction.Update,
+                OldValues: auditValuesBefore,
                 NewValues: vitals.AuditValues(),
                 changedByUserId),
             cancellationToken);

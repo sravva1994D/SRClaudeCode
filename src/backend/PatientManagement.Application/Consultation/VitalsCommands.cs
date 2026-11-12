@@ -9,6 +9,15 @@ public sealed record RecordVitalsCommand(
     int? Pulse,
     int ChangedByUserId);
 
+/// <summary>Corrects the vitals already recorded for a visit. Allowed at any visit status (Q2); the same range rules apply.</summary>
+public sealed record UpdateVitalsCommand(
+    int VisitId,
+    decimal? Temperature,
+    int? BloodPressureSystolic,
+    int? BloodPressureDiastolic,
+    int? Pulse,
+    int ChangedByUserId);
+
 public sealed record GetVitalsQuery(int VisitId);
 
 /// <summary>The recorded vitals as the API returns them.</summary>

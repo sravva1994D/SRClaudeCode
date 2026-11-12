@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using PatientManagement.Application.Interfaces;
@@ -66,6 +67,40 @@ public sealed class VisitCompletionRepositoryTests
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ConcurrencyConflictException>();
+    }
+
+    [Fact]
+    public async Task MarkModifiedAsync_CompletedVisit_StampsTheVisitAndAuditsTheOldAndNewTime()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await TestMigrations.ApplyAllAsync(database);
+        await SqlQuery.ExecuteAsync(database.ConnectionString, InsertDoctorSql);
+        var setup = CreateSetup(database);
+        var visitId = await StartVisitAsync(setup);
+        var visits = new SqlVisitRepository(setup.Audit, setup.Clock, setup.ConnectionFactory, setup.Options);
+
+        DateTime stampedAt = default;
+        await setup.UnitOfWork.ExecuteAsync(async token =>
+        {
+            var visit = await visits.FindActiveForUpdateAsync(visitId, token)
+                ?? throw new InvalidOperationException("The visit should exist.");
+            var before = visit.AuditValues();
+            visit.Complete();
+            await visits.SaveStatusAsync(visit, before, 1, token);
+            await visits.MarkModifiedAsync(visit, 1, token);
+            stampedAt = visit.ModifiedDate;
+        }, CancellationToken.None);
+
+        var modifiedAudit = await SqlQuery.ScalarStringAsync(
+            database.ConnectionString,
+            "SELECT NewValues FROM dbo.AuditLogs WHERE TableName = N'Visits' AND OldValues LIKE N'%ModifiedDate%';");
+        modifiedAudit.Should().Contain("ModifiedDate");
+        var storedStamp = await SqlQuery.ScalarStringAsync(
+            database.ConnectionString,
+            $"SELECT CONVERT(varchar(23), ModifiedDate, 126) FROM dbo.Visits WHERE VisitId = {visitId};");
+        // datetime2(3) rounds to the millisecond, so the stored value can differ from the clock value by a few ticks.
+        DateTime.Parse(storedStamp, CultureInfo.InvariantCulture)
+            .Should().BeCloseTo(stampedAt, TimeSpan.FromMilliseconds(5));
     }
 
     private static Setup CreateSetup(TestDatabase database)

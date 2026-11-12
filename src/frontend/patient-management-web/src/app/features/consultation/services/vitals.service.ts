@@ -30,6 +30,13 @@ export class VitalsService {
       context: silently(),
     });
   }
+
+  /** Corrects vitals already recorded for the visit, at any visit status. Errors are shown inline by the page. */
+  update(visitId: number, request: RecordVitalsRequest): Observable<RecordVitalsResponse> {
+    return this.http.put<RecordVitalsResponse>(`${this.baseUrl}/${visitId}/vitals`, request, {
+      context: silently(),
+    });
+  }
 }
 
 function silently(): HttpContext {

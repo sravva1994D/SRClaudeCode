@@ -8,7 +8,12 @@ public sealed record StartVisitCommand(int AppointmentId, int ChangedByUserId);
 public sealed record GetVisitQuery(int VisitId);
 
 /// <summary>What the API returns for a visit.</summary>
-public sealed record VisitDetails(int VisitId, int PatientId, int? AppointmentId, int StatusId)
+public sealed record VisitDetails(int VisitId, int PatientId, int? AppointmentId, int StatusId, DateTime ModifiedDate)
 {
-    public static VisitDetails From(Visit visit) => new(visit.VisitId, visit.PatientId, visit.AppointmentId, visit.StatusId);
+    public static VisitDetails From(Visit visit) => new(
+        visit.VisitId,
+        visit.PatientId,
+        visit.AppointmentId,
+        visit.StatusId,
+        visit.ModifiedDate);
 }

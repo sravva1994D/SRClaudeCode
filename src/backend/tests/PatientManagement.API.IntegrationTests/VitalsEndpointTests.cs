@@ -74,6 +74,59 @@ public sealed class VitalsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task UpdateVitals_CompletedVisit_Returns200AndTheCorrectionIsStored()
+    {
+        await using var database = await TemporaryDatabase.CreateAsync();
+        using var client = await StartAsync(database);
+        var token = await SignInAsync(client);
+        var visitId = await StartVisitAsync(client, token);
+        await SendAsync(client, HttpMethod.Post, $"{VisitsPath}/{visitId}/vitals", token,
+            JsonContent.Create(new RecordVitalsRequest(36.6m, 120, 80, 72)));
+        await SendAsync(client, HttpMethod.Post, $"{VisitsPath}/{visitId}/complete", token, content: null);
+
+        var corrected = await SendAsync(client, HttpMethod.Put, $"{VisitsPath}/{visitId}/vitals", token,
+            JsonContent.Create(new RecordVitalsRequest(36.6m, 120, 80, 76)));
+
+        corrected.StatusCode.Should().Be(HttpStatusCode.OK);
+        var stored = await SendAsync(client, HttpMethod.Get, $"{VisitsPath}/{visitId}/vitals", token, content: null);
+        (await stored.Content.ReadFromJsonAsync<VitalsDetailsBody>())!.Pulse.Should().Be(76);
+    }
+
+    [Fact]
+    public async Task UpdateVitals_NoVitalsRecorded_Returns404()
+    {
+        await using var database = await TemporaryDatabase.CreateAsync();
+        using var client = await StartAsync(database);
+        var token = await SignInAsync(client);
+        var visitId = await StartVisitAsync(client, token);
+
+        var response = await SendAsync(client, HttpMethod.Put, $"{VisitsPath}/{visitId}/vitals", token,
+            JsonContent.Create(new RecordVitalsRequest(null, null, null, 76)));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateVitals_ImplausiblePulse_Returns400AndKeepsTheStoredValue()
+    {
+        await using var database = await TemporaryDatabase.CreateAsync();
+        using var client = await StartAsync(database);
+        await ExecuteSqlAsync(database, InsertTestPulseRangeSql);
+        var token = await SignInAsync(client);
+        var visitId = await StartVisitAsync(client, token);
+        await SendAsync(client, HttpMethod.Post, $"{VisitsPath}/{visitId}/vitals", token,
+            JsonContent.Create(new RecordVitalsRequest(null, null, null, 72)));
+
+        var response = await SendAsync(client, HttpMethod.Put, $"{VisitsPath}/{visitId}/vitals", token,
+            JsonContent.Create(new RecordVitalsRequest(null, null, null, 900)));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadFromJsonAsync<ErrorResponse>())!.Code.Should().Be("vitals_implausible");
+        var stored = await SendAsync(client, HttpMethod.Get, $"{VisitsPath}/{visitId}/vitals", token, content: null);
+        (await stored.Content.ReadFromJsonAsync<VitalsDetailsBody>())!.Pulse.Should().Be(72);
+    }
+
+    [Fact]
     public async Task RecordVitals_SecondTimeForTheSameVisit_Returns409WithCode()
     {
         await using var database = await TemporaryDatabase.CreateAsync();
@@ -147,5 +200,5 @@ public sealed class VitalsEndpointTests(WebApplicationFactory<Program> factory)
 
     private sealed record VitalsBody(VitalsDetailsBody Vitals, IReadOnlyList<string> Warnings);
 
-    private sealed record VitalsDetailsBody(int VitalsId, int VisitId);
+    private sealed record VitalsDetailsBody(int VitalsId, int VisitId, int? Pulse);
 }

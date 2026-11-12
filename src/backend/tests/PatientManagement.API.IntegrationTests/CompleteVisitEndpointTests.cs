@@ -53,6 +53,31 @@ public sealed class CompleteVisitEndpointTests(WebApplicationFactory<Program> fa
         (await again.Content.ReadFromJsonAsync<ErrorResponse>())!.Code.Should().Be("visit_not_in_progress");
     }
 
+    [Fact]
+    public async Task CompletedVisit_NotesCanStillBeEdited_AndTheVisitShowsWhenItChanged()
+    {
+        await using var database = await TemporaryDatabase.CreateAsync();
+        using var client = await StartAsync(database);
+        var token = await SignInAsync(client);
+        var visitId = await StartVisitAsync(client, token);
+        await SendAsync(client, HttpMethod.Post, $"{VisitsPath}/{visitId}/vitals", token,
+            JsonContent.Create(new RecordVitalsRequest(36.6m, 120, 80, 72)));
+        await SendAsync(client, HttpMethod.Post, $"{VisitsPath}/{visitId}/complete", token, content: null);
+        var completedVisit = await SendAsync(client, HttpMethod.Get, $"{VisitsPath}/{visitId}", token, content: null);
+        var modifiedWhenCompleted = (await completedVisit.Content.ReadFromJsonAsync<VisitBody>())!.ModifiedDate;
+
+        var edited = await SendAsync(client, HttpMethod.Put, $"{VisitsPath}/{visitId}/complaints", token,
+            JsonContent.Create(new SaveComplaintsRequest(["Cough"])));
+
+        edited.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var afterEdit = await SendAsync(client, HttpMethod.Get, $"{VisitsPath}/{visitId}", token, content: null);
+        var visit = await afterEdit.Content.ReadFromJsonAsync<VisitBody>();
+        visit!.StatusId.Should().Be(2, "editing notes does not reopen the visit");
+        visit.ModifiedDate.Should().BeOnOrAfter(modifiedWhenCompleted);
+        var notes = await SendAsync(client, HttpMethod.Get, $"{VisitsPath}/{visitId}/notes", token, content: null);
+        (await notes.Content.ReadFromJsonAsync<NotesBody>())!.Complaints.Should().Equal("Cough");
+    }
+
     private static async Task<int> StartVisitAsync(HttpClient client, string token)
     {
         var patient = await SendAsync(client, HttpMethod.Post, PatientsPath, token,
@@ -98,5 +123,7 @@ public sealed class CompleteVisitEndpointTests(WebApplicationFactory<Program> fa
 
     private sealed record AppointmentBody(int AppointmentId);
 
-    private sealed record VisitBody(int VisitId, int PatientId, int? AppointmentId, int StatusId);
+    private sealed record VisitBody(int VisitId, int PatientId, int? AppointmentId, int StatusId, DateTime ModifiedDate);
+
+    private sealed record NotesBody(IReadOnlyList<string> Complaints);
 }

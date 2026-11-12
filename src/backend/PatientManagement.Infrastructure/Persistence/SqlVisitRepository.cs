@@ -28,15 +28,24 @@ public sealed class SqlVisitRepository(
     private const int DuplicateKeyErrorNumber = 2601;
     private const int UniqueConstraintErrorNumber = 2627;
 
+    // Stamps the visit as changed by a note, medication or vitals edit. The row version check keeps the stamp from
+    // overwriting a concurrent change that the caller has not seen.
+    private const string MarkModifiedSql = """
+        UPDATE dbo.Visits
+        SET ModifiedDate = @ModifiedDate, ModifiedBy = @ChangedBy
+        OUTPUT inserted.RowVersion
+        WHERE VisitId = @VisitId AND IsActive = 1 AND RowVersion = @RowVersion;
+        """;
+
     private const string FindActiveSql = """
-        SELECT VisitId, PatientId, AppointmentId, VisitStatusId, IsActive, RowVersion
+        SELECT VisitId, PatientId, AppointmentId, VisitStatusId, IsActive, RowVersion, ModifiedDate
         FROM dbo.Visits
         WHERE VisitId = @VisitId AND IsActive = 1;
         """;
 
     // The update lock is held until the transaction ends, so a second writer for the same visit waits for the first.
     private const string FindActiveForUpdateSql = """
-        SELECT VisitId, PatientId, AppointmentId, VisitStatusId, IsActive, RowVersion
+        SELECT VisitId, PatientId, AppointmentId, VisitStatusId, IsActive, RowVersion, ModifiedDate
         FROM dbo.Visits WITH (UPDLOCK, HOLDLOCK)
         WHERE VisitId = @VisitId AND IsActive = 1;
         """;
@@ -97,6 +106,36 @@ public sealed class SqlVisitRepository(
             cancellationToken);
     }
 
+    public async Task MarkModifiedAsync(Visit visit, int changedByUserId, CancellationToken cancellationToken)
+    {
+        var scope = UnitOfWorkScope.Current;
+        var previousModifiedDate = visit.ModifiedDate;
+        var modifiedDate = clock.UtcNow;
+
+        await using var command = scope.Connection.CreateCommand();
+        command.CommandText = MarkModifiedSql;
+        command.CommandTimeout = options.Value.CommandTimeoutSeconds;
+        command.Transaction = scope.Transaction;
+        command.Parameters.Add(new SqlParameter("@VisitId", visit.VisitId));
+        command.Parameters.Add(new SqlParameter("@RowVersion", visit.RowVersion));
+        command.Parameters.Add(new SqlParameter("@ChangedBy", changedByUserId));
+        command.Parameters.Add(new SqlParameter("@ModifiedDate", modifiedDate));
+
+        var newRowVersion = await command.ExecuteScalarAsync(cancellationToken) as byte[];
+        visit.SetRowVersion(newRowVersion ?? throw new ConcurrencyConflictException(TableName));
+        visit.SetModifiedDate(modifiedDate);
+
+        await auditLogWriter.WriteAsync(
+            new AuditEntry(
+                TableName,
+                visit.VisitId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                AuditAction.Update,
+                OldValues: new Dictionary<string, object?> { ["ModifiedDate"] = previousModifiedDate },
+                NewValues: new Dictionary<string, object?> { ["ModifiedDate"] = modifiedDate },
+                changedByUserId),
+            cancellationToken);
+    }
+
     public async Task AddAsync(Visit visit, int changedByUserId, CancellationToken cancellationToken)
     {
         var scope = UnitOfWorkScope.Current;
@@ -108,7 +147,9 @@ public sealed class SqlVisitRepository(
         command.Parameters.Add(new SqlParameter("@AppointmentId", (object?)visit.AppointmentId ?? DBNull.Value));
         command.Parameters.Add(new SqlParameter("@StatusId", visit.StatusId));
         command.Parameters.Add(new SqlParameter("@ChangedBy", changedByUserId));
-        command.Parameters.Add(new SqlParameter("@ModifiedDate", clock.UtcNow));
+        var modifiedDate = clock.UtcNow;
+        command.Parameters.Add(new SqlParameter("@ModifiedDate", modifiedDate));
+        visit.SetModifiedDate(modifiedDate);
 
         try
         {
@@ -161,6 +202,8 @@ public sealed class SqlVisitRepository(
             reader.IsDBNull(2) ? null : reader.GetInt32(2),
             reader.GetInt32(3),
             reader.GetBoolean(4),
-            (byte[])reader.GetValue(5));
+            (byte[])reader.GetValue(5),
+            // datetime2 comes back unspecified; the column holds UTC, so mark it as such before it reaches the API.
+            DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc));
     }
 }
