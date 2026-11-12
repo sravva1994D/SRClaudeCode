@@ -47,6 +47,18 @@ public sealed partial class ErrorHandlingMiddleware(RequestDelegate next, ILogge
             LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
             await WriteErrorAsync(context, StatusCodes.Status404NotFound, exception.ErrorCode, exception.Message);
         }
+        catch (VitalsImplausibleException exception)
+        {
+            // Checked before DomainException: an impossible vital sign is a request error (400), as CLAUDE.md 6.5 requires.
+            // The message names the signs only; the values are never echoed.
+            LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
+            await WriteErrorAsync(context, StatusCodes.Status400BadRequest, exception.ErrorCode, exception.Message);
+        }
+        catch (VitalsAlreadyRecordedException exception)
+        {
+            LogRejectedRequest(logger, exception.ErrorCode, CorrelationIdOf(context));
+            await WriteErrorAsync(context, StatusCodes.Status409Conflict, exception.ErrorCode, exception.Message);
+        }
         catch (VisitAlreadyStartedException exception)
         {
             // Checked before DomainException: a second visit for the same appointment is a conflict (409).
