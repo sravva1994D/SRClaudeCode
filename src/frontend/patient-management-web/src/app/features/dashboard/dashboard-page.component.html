@@ -37,6 +37,16 @@
               <span class="time">{{ item.slotStartUtc | date: 'shortTime' }}</span>
               <a [routerLink]="['/patients', item.patientId]">{{ item.patientFullName }}</a>
               <span class="status">{{ statusKey(item.statusId) | translate }}</span>
+              @if (canStartVisit(item)) {
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [disabled]="startingAppointmentId() !== null"
+                  (click)="startVisit(item)"
+                >
+                  {{ 'dashboard.startVisit' | translate }}
+                </button>
+              }
             </li>
           }
         </ul>

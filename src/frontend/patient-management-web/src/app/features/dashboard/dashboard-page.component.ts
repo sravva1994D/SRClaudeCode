@@ -8,12 +8,15 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { catchError, of } from 'rxjs';
 
-import { AppointmentListItem } from '../../core/models/appointment.model';
+import {
+  APPOINTMENT_STATUS_SCHEDULED,
+  AppointmentListItem,
+} from '../../core/models/appointment.model';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { agendaRange, DashboardAgenda, splitAgenda } from './dashboard-agenda';
 import { DashboardService } from './dashboard.service';
@@ -32,10 +35,13 @@ import { DashboardService } from './dashboard.service';
 export class DashboardPageComponent implements OnInit {
   private readonly dashboard = inject(DashboardService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
   readonly agenda = signal<DashboardAgenda>({ today: [], upcoming: [] });
+  /** The appointment whose visit is being started, so a second click cannot start it twice. */
+  readonly startingAppointmentId = signal<number | null>(null);
 
   ngOnInit(): void {
     const now = new Date();
@@ -58,5 +64,28 @@ export class DashboardPageComponent implements OnInit {
   /** Translation key for an appointment status, from the seeded AppointmentStatuses table. */
   statusKey(statusId: number): string {
     return `appointments.status.${statusId}`;
+  }
+
+  /** Only a scheduled appointment can start a visit; the API refuses the others (422). */
+  canStartVisit(item: AppointmentListItem): boolean {
+    return item.statusId === APPOINTMENT_STATUS_SCHEDULED;
+  }
+
+  /** Starts the visit and opens the vitals page for it. Failures are shown by the error interceptor. */
+  startVisit(item: AppointmentListItem): void {
+    if (this.startingAppointmentId() !== null) {
+      return;
+    }
+
+    this.startingAppointmentId.set(item.appointmentId);
+    this.dashboard
+      .startVisit(item.appointmentId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (visit) => {
+          void this.router.navigate(['/consultation/visits', visit.visitId, 'vitals']);
+        },
+        error: () => this.startingAppointmentId.set(null),
+      });
   }
 }
