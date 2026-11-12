@@ -95,7 +95,8 @@ public sealed class SaveDiagnosesCommandHandler(
 public sealed class GetVisitNotesQueryHandler(
     IVisitRepository visits,
     IComplaintRepository complaints,
-    IDiagnosisRepository diagnoses)
+    IDiagnosisRepository diagnoses,
+    IMedicationRepository medications)
 {
     public async Task<VisitNotesDetails> HandleAsync(GetVisitNotesQuery query, CancellationToken cancellationToken)
     {
@@ -104,10 +105,17 @@ public sealed class GetVisitNotesQueryHandler(
 
         var savedComplaints = await complaints.ListActiveForVisitAsync(query.VisitId, cancellationToken);
         var savedDiagnoses = await diagnoses.ListActiveForVisitAsync(query.VisitId, cancellationToken);
+        var savedMedications = await medications.ListActiveForVisitAsync(query.VisitId, cancellationToken);
 
         return new VisitNotesDetails(
             query.VisitId,
             savedComplaints.Select(complaint => complaint.Text).ToList(),
-            savedDiagnoses.Select(diagnosis => new DiagnosisDetails(diagnosis.Text, diagnosis.Code)).ToList());
+            savedDiagnoses.Select(diagnosis => new DiagnosisDetails(diagnosis.Text, diagnosis.Code)).ToList(),
+            savedMedications.Select(medication => new MedicationDetails(
+                medication.MedicineName,
+                medication.Dosage,
+                medication.Frequency,
+                medication.Duration,
+                medication.SpecialInstructions)).ToList());
     }
 }

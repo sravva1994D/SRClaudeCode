@@ -49,6 +49,22 @@ describe('VisitNotesService', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
   });
 
+  it('puts the medications list as a draft', () => {
+    const medication = {
+      medicineName: 'Paracetamol',
+      dosage: '500mg',
+      frequency: 'Twice daily',
+      duration: '7 days',
+      specialInstructions: null,
+    };
+    service.saveMedications(5, [medication]).subscribe();
+
+    const request = http.expectOne(`${BASE_URL}/medications`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ medications: [medication] });
+    request.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
   it('suppresses the error snackbar on saves, because the page shows the message inline', () => {
     service.saveComplaints(5, ['Cough']).subscribe({ error: () => undefined });
 

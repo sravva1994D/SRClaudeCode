@@ -4,9 +4,13 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import { SUPPRESS_ERROR_NOTIFICATION } from '../../../core/http/silent-errors';
-import { DiagnosisEntry, VisitNotes } from '../../../core/models/visit-notes.model';
+import {
+  DiagnosisEntry,
+  MedicationEntry,
+  VisitNotes,
+} from '../../../core/models/visit-notes.model';
 
-/** Reads and saves a visit's complaints and diagnoses. Errors reach callers already normalized by the HTTP interceptors. */
+/** Reads and saves a visit's complaints, diagnoses and medications. Errors reach callers already normalized by the HTTP interceptors. */
 @Injectable({ providedIn: 'root' })
 export class VisitNotesService {
   private readonly http = inject(HttpClient);
@@ -33,6 +37,15 @@ export class VisitNotesService {
     return this.http.put<void>(
       `${this.baseUrl}/${visitId}/diagnoses`,
       { diagnoses },
+      { context: silently() },
+    );
+  }
+
+  /** Saves the medications as a draft: the list replaces the saved medications. Errors are shown inline, as above. */
+  saveMedications(visitId: number, medications: MedicationEntry[]): Observable<void> {
+    return this.http.put<void>(
+      `${this.baseUrl}/${visitId}/medications`,
+      { medications },
       { context: silently() },
     );
   }

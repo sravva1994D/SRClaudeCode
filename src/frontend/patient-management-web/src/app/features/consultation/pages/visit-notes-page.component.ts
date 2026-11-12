@@ -23,12 +23,14 @@ import { NotificationService } from '../../../core/notifications/notification.se
 import {
   DIAGNOSIS_CODE_MAXIMUM_LENGTH,
   DiagnosisEntry,
+  MedicationEntry,
   NOTE_ITEMS_MAXIMUM,
   NOTE_TEXT_MAXIMUM_LENGTH,
   VisitNotes,
 } from '../../../core/models/visit-notes.model';
 import { Visit, VISIT_STATUS_IN_PROGRESS } from '../../../core/models/visit.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { MedicationControls, MedicationRowComponent } from '../components/medication-row.component';
 import { VisitsService } from '../services/visits.service';
 import { VisitNotesService } from '../services/visit-notes.service';
 
@@ -38,9 +40,9 @@ interface DiagnosisControls {
 }
 
 /**
- * Complaints and diagnosis for a visit, saved as a draft. Each save replaces the visit's saved lists. Blank entries
- * are dropped before saving. The server enforces the same limits and the in-progress rule; the form mirrors them for
- * quick feedback.
+ * Complaints, diagnosis and medications for a visit, saved as a draft. Each save replaces the visit's saved lists.
+ * Blank complaint and diagnosis entries are dropped before saving; a medicine must have its name, dosage, frequency
+ * and duration. The server enforces the same limits and the in-progress rule; the form mirrors them for feedback.
  */
 @Component({
   selector: 'app-visit-notes-page',
@@ -51,6 +53,7 @@ interface DiagnosisControls {
     MatFormFieldModule,
     MatInputModule,
     MatProgressBarModule,
+    MedicationRowComponent,
     TranslatePipe,
   ],
   templateUrl: './visit-notes-page.component.html',
@@ -84,6 +87,7 @@ export class VisitNotesPageComponent implements OnInit {
 
   readonly complaints = new FormArray<FormControl<string>>([]);
   readonly diagnoses = new FormArray<FormGroup<DiagnosisControls>>([]);
+  readonly medications = new FormArray<FormGroup<MedicationControls>>([]);
 
   ngOnInit(): void {
     this.load();
@@ -95,6 +99,10 @@ export class VisitNotesPageComponent implements OnInit {
 
   get diagnosesAtLimit(): boolean {
     return this.diagnoses.length >= this.maximumItems;
+  }
+
+  get medicationsAtLimit(): boolean {
+    return this.medications.length >= this.maximumItems;
   }
 
   addComplaint(text = ''): void {
@@ -129,13 +137,44 @@ export class VisitNotesPageComponent implements OnInit {
     this.diagnoses.removeAt(index);
   }
 
+  addMedication(entry: MedicationEntry | null = null): void {
+    this.medications.push(
+      new FormGroup<MedicationControls>({
+        medicineName: new FormControl(entry?.medicineName ?? '', {
+          nonNullable: true,
+          validators: [Validators.required],
+        }),
+        dosage: new FormControl(entry?.dosage ?? '', {
+          nonNullable: true,
+          validators: [Validators.required],
+        }),
+        frequency: new FormControl(entry?.frequency ?? '', {
+          nonNullable: true,
+          validators: [Validators.required],
+        }),
+        duration: new FormControl(entry?.duration ?? '', {
+          nonNullable: true,
+          validators: [Validators.required],
+        }),
+        specialInstructions: new FormControl(entry?.specialInstructions ?? '', {
+          nonNullable: true,
+        }),
+      }),
+    );
+  }
+
+  removeMedication(index: number): void {
+    this.medications.removeAt(index);
+  }
+
   save(): void {
     if (this.saving()) {
       return;
     }
-    if (this.complaints.invalid || this.diagnoses.invalid) {
+    if (this.complaints.invalid || this.diagnoses.invalid || this.medications.invalid) {
       this.complaints.markAllAsTouched();
       this.diagnoses.markAllAsTouched();
+      this.medications.markAllAsTouched();
       return;
     }
 
@@ -145,6 +184,7 @@ export class VisitNotesPageComponent implements OnInit {
     forkJoin([
       this.notesService.saveComplaints(visitId, this.complaintTexts()),
       this.notesService.saveDiagnoses(visitId, this.diagnosisEntries()),
+      this.notesService.saveMedications(visitId, this.medicationEntries()),
     ])
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -188,6 +228,8 @@ export class VisitNotesPageComponent implements OnInit {
     notes.complaints.forEach((text) => this.addComplaint(text));
     this.diagnoses.clear();
     notes.diagnoses.forEach((entry) => this.addDiagnosis(entry.text, entry.code ?? ''));
+    this.medications.clear();
+    notes.medications.forEach((entry) => this.addMedication(entry));
   }
 
   private complaintTexts(): string[] {
@@ -203,5 +245,20 @@ export class VisitNotesPageComponent implements OnInit {
         code: group.controls.code.value.trim() || null,
       }))
       .filter((entry) => entry.text.length > 0);
+  }
+
+  private medicationEntries(): MedicationEntry[] {
+    return this.medications.controls
+      .map((group) => {
+        const raw = group.getRawValue();
+        return {
+          medicineName: raw.medicineName.trim(),
+          dosage: raw.dosage.trim(),
+          frequency: raw.frequency.trim(),
+          duration: raw.duration.trim(),
+          specialInstructions: raw.specialInstructions.trim() || null,
+        };
+      })
+      .filter((entry) => entry.medicineName.length > 0);
   }
 }
