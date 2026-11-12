@@ -24,14 +24,14 @@ test('a consultation runs from vitals to completion and can be corrected afterwa
   await signIn(page);
 
   // Vitals: record, then correct the saved values.
-  await page.goto(`/consultation/visits/${visitId}/vitals`);
+  await openInApp(page, `/consultation/visits/${visitId}/vitals`);
   await page.getByLabel('Pulse (bpm)').fill('72');
   await page.getByLabel('Temperature (°C)').fill('36.6');
   await page.getByRole('button', { name: 'Save vitals' }).click();
   await expect(page.getByRole('heading', { name: 'Recorded vitals' })).toBeVisible();
 
   // Notes: save a complaint as a draft, then complete the visit.
-  await page.goto(`/consultation/visits/${visitId}/notes`);
+  await openInApp(page, `/consultation/visits/${visitId}/notes`);
   await page.getByRole('button', { name: 'Add complaint' }).click();
   await page.getByLabel('Complaint', { exact: true }).first().fill('Cough');
   await page.getByRole('button', { name: 'Save draft' }).click();
@@ -50,13 +50,24 @@ test('a consultation runs from vitals to completion and can be corrected afterwa
   await expect(page.getByText(/Last modified:/)).toBeVisible();
 
   // Vitals on the completed visit: correct the pulse.
-  await page.goto(`/consultation/visits/${visitId}/vitals`);
+  await openInApp(page, `/consultation/visits/${visitId}/vitals`);
   await page.getByRole('button', { name: 'Edit vitals' }).click();
   await page.getByLabel('Pulse (bpm)').fill('80');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('heading', { name: 'Recorded vitals' })).toBeVisible();
   await expect(page.locator('.recorded')).toContainText('80');
 });
+
+/**
+ * Navigates inside the app without a page load. A full load drops the in-memory access token (CLAUDE.md 8.4), and
+ * WebKit does not send the Secure refresh cookie over plain http://localhost, so the session would be lost.
+ */
+async function openInApp(page: Page, path: string): Promise<void> {
+  await page.evaluate((target) => {
+    window.history.pushState({}, '', target);
+    window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+  }, path);
+}
 
 async function signIn(page: Page): Promise<void> {
   await page.goto('/login');
