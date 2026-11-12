@@ -35,4 +35,13 @@ public interface IAppointmentRepository
         DateTime fromUtc,
         DateTime toUtc,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns one page of a patient's active appointments of every status, newest first, with the total count. Read-only.
+    /// </summary>
+    Task<Paging.PagedResponse<Appointments.PatientAppointmentHistoryItem>> ListForPatientAsync(
+        int patientId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken);
 }

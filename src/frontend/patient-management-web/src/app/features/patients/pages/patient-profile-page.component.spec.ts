@@ -21,10 +21,18 @@ const ASHA: Patient = {
   chronicConditions: 'Asthma',
 };
 
+const ONE_APPOINTMENT_PAGE = {
+  items: [{ appointmentId: 8, slotStartUtc: '2026-11-10T09:00:00Z', statusId: 2 }],
+  totalCount: 1,
+  pageNumber: 1,
+  pageSize: 10,
+};
+
 describe('PatientProfilePageComponent', () => {
   let fixture: ComponentFixture<PatientProfilePageComponent>;
   let get: ReturnType<typeof vi.fn>;
   let markViewed: ReturnType<typeof vi.fn>;
+  let appointmentHistory: ReturnType<typeof vi.fn>;
 
   function createPage(): void {
     TestBed.configureTestingModule({
@@ -39,6 +47,7 @@ describe('PatientProfilePageComponent', () => {
           useValue: {
             get,
             markViewed,
+            appointmentHistory,
             list: vi.fn(),
             recent: vi.fn(),
             create: vi.fn(),
@@ -56,6 +65,7 @@ describe('PatientProfilePageComponent', () => {
   beforeEach(() => {
     get = vi.fn(() => of(ASHA));
     markViewed = vi.fn(() => of(undefined));
+    appointmentHistory = vi.fn(() => of(ONE_APPOINTMENT_PAGE));
   });
 
   afterEach(() => {
@@ -85,5 +95,32 @@ describe('PatientProfilePageComponent', () => {
     createPage();
 
     expect(fixture.nativeElement.querySelector('.error')).not.toBeNull();
+  });
+
+  it('loads the first page of appointment history for the patient', () => {
+    createPage();
+
+    expect(appointmentHistory).toHaveBeenCalledWith(3, 1, 10);
+    const rows = fixture.nativeElement.querySelectorAll('.appointments .row');
+    expect(rows).toHaveLength(1);
+  });
+
+  it('shows an empty message when the patient has no appointments', () => {
+    appointmentHistory.mockReturnValue(
+      of({ items: [], totalCount: 0, pageNumber: 1, pageSize: 10 }),
+    );
+
+    createPage();
+
+    expect(fixture.nativeElement.querySelector('.appointments .empty')).not.toBeNull();
+  });
+
+  it('shows an error in the appointments section when the history cannot be loaded', () => {
+    appointmentHistory.mockReturnValue(throwError(() => new Error('network')));
+
+    createPage();
+
+    expect(fixture.nativeElement.querySelector('.appointments .error')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Asha Rao');
   });
 });
