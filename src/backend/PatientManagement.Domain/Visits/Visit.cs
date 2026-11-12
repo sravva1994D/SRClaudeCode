@@ -60,6 +60,15 @@ public sealed class Visit
         }
     }
 
+    /// <summary>A prescription is issued only after the consultation is complete (BRD workflow 4).</summary>
+    public void EnsureCompleted()
+    {
+        if (StatusId != VisitStatuses.Completed)
+        {
+            throw new DomainException("visit_not_completed", "A prescription can be generated only after the visit is completed.");
+        }
+    }
+
     /// <summary>
     /// Completes an in-progress visit. The caller checks the visit's required records (vitals) and completes the
     /// appointment in the same unit of work, so a failure at any step leaves the visit in progress.
