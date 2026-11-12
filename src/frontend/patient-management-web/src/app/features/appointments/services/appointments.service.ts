@@ -8,6 +8,7 @@ import {
   AppointmentListItem,
   ScheduleAppointmentRequest,
 } from '../../../core/models/appointment.model';
+import { Visit } from '../../../core/models/visit.model';
 
 /** Reads and books appointments. Errors reach callers already normalized by the HTTP interceptors. */
 @Injectable({ providedIn: 'root' })
@@ -28,5 +29,10 @@ export class AppointmentsService {
       slotStart: slotStart.toISOString(),
     };
     return this.http.post<AppointmentDetails>(this.url, body);
+  }
+
+  /** Starts the visit for a scheduled appointment. The API answers 201 with the new visit. */
+  startVisit(appointmentId: number): Observable<Visit> {
+    return this.http.post<Visit>(`${this.url}/${appointmentId}/start-visit`, null);
   }
 }
