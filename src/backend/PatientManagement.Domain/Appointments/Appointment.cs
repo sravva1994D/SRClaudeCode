@@ -90,6 +90,17 @@ public sealed class Appointment
     }
 
     /// <summary>
+    /// A visit can start only from a scheduled appointment. A cancelled, completed or no-show appointment cannot start one.
+    /// </summary>
+    public void EnsureCanStartVisit()
+    {
+        if (StatusId != AppointmentStatuses.Scheduled)
+        {
+            throw new DomainException("appointment_not_startable", "A visit can only start from a scheduled appointment.");
+        }
+    }
+
+    /// <summary>
     /// Records the outcome of a scheduled appointment: completed, cancelled or no-show. The status can be set once; a
     /// cancelled appointment frees its slot in the database.
     /// </summary>

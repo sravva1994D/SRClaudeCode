@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using PatientManagement.Application.Appointments;
 using PatientManagement.Application.Appointments.Handlers;
 using PatientManagement.Application.Interfaces;
+using PatientManagement.Application.Visits;
+using PatientManagement.Application.Visits.Handlers;
 using PatientManagement.Domain.Appointments;
 
 namespace PatientManagement.API.Controllers;
@@ -21,8 +23,25 @@ public sealed class AppointmentsController(
     RescheduleAppointmentCommandHandler reschedule,
     ChangeAppointmentStatusCommandHandler changeStatus,
     IValidator<RescheduleAppointmentCommand> rescheduleValidator,
+    StartVisitCommandHandler startVisit,
     ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Starts a visit (consultation) from a scheduled appointment. Returns 201 with the visit's location. An appointment
+    /// that is not scheduled returns 422; one that already has a visit returns 409.
+    /// </summary>
+    [HttpPost("{appointmentId:int}/start-visit")]
+    [ProducesResponseType<VisitDetails>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<VisitDetails>> StartVisit(int appointmentId, CancellationToken cancellationToken)
+    {
+        var visit = await startVisit.HandleAsync(new StartVisitCommand(appointmentId, currentUser.UserId), cancellationToken);
+        return CreatedAtAction("Get", "Visits", new { visitId = visit.VisitId }, visit);
+    }
+
     /// <summary>
     /// Moves a scheduled appointment to a new future slot. The slot rules are the same as for booking. A completed,
     /// cancelled or no-show appointment returns 422.
