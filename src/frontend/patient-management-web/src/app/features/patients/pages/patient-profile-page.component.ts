@@ -19,6 +19,7 @@ import { PatientAppointment } from '../../../core/models/appointment.model';
 import { PagedResponse, Patient, PATIENT_GENDER_OPTIONS } from '../../../core/models/patient.model';
 import { AgePipe } from '../../../shared/pipes/age.pipe';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { PatientVisitHistoryComponent } from '../components/patient-visit-history.component';
 import { PatientsService } from '../services/patients.service';
 
 const APPOINTMENTS_PAGE_SIZE = 10;
@@ -36,6 +37,7 @@ const APPOINTMENTS_PAGE_SIZE = 10;
     MatPaginatorModule,
     MatProgressBarModule,
     AgePipe,
+    PatientVisitHistoryComponent,
     TranslatePipe,
   ],
   templateUrl: './patient-profile-page.component.html',

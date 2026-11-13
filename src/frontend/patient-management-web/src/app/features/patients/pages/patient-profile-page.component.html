@@ -79,9 +79,8 @@
         }
       </section>
 
-      <section class="visits" aria-labelledby="visits-heading">
-        <h2 id="visits-heading">{{ 'patients.visitsTitle' | translate }}</h2>
-        <p>{{ 'patients.visitsPlaceholder' | translate }}</p>
+      <section class="visits">
+        <app-patient-visit-history [patientId]="patientId()" />
       </section>
 
       <p class="back">

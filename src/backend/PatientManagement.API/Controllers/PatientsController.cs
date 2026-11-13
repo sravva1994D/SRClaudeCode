@@ -7,6 +7,8 @@ using PatientManagement.Application.Interfaces;
 using PatientManagement.Application.Paging;
 using PatientManagement.Application.Patients;
 using PatientManagement.Application.Patients.Handlers;
+using PatientManagement.Application.Visits;
+using PatientManagement.Application.Visits.Handlers;
 
 namespace PatientManagement.API.Controllers;
 
@@ -29,8 +31,32 @@ public sealed class PatientsController(
     RecordPatientViewedCommandHandler recordViewed,
     PatientAppointmentHistoryHandler appointmentHistory,
     IValidator<PatientAppointmentHistoryQuery> appointmentHistoryValidator,
+    PatientVisitHistoryHandler visitHistory,
+    IValidator<PatientVisitHistoryQuery> visitHistoryValidator,
     ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Returns one page of the patient's visits, newest first. Optional <c>from</c> and <c>to</c> (yyyy-MM-dd, inclusive,
+    /// UTC days) filter the visits by when they started; <c>to</c> must not be before <c>from</c> (400).
+    /// </summary>
+    [HttpGet("{patientId:int}/visits")]
+    [ProducesResponseType<PagedResponse<PatientVisitHistoryItem>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PagedResponse<PatientVisitHistoryItem>>> VisitHistory(
+        int patientId,
+        [FromQuery] DateOnly? from = null,
+        [FromQuery] DateOnly? to = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PagingLimits.DefaultPageSize)
+    {
+        var query = new PatientVisitHistoryQuery(patientId, from, to, page, pageSize);
+        await visitHistoryValidator.ValidateAndThrowAsync(query, HttpContext.RequestAborted);
+
+        return Ok(await visitHistory.HandleAsync(query, HttpContext.RequestAborted));
+    }
+
     /// <summary>
     /// Returns one page of the patient's appointments, newest first, with every status. Paging uses page and pageSize
     /// (page size is at most 100).
