@@ -1,0 +1,153 @@
+<section class="prescription-page">
+  <header class="heading no-print">
+    <h1>{{ 'prescription.title' | translate }}</h1>
+    <a mat-button [routerLink]="['/consultation/visits', visitId(), 'notes']">
+      {{ 'prescription.backToNotes' | translate }}
+    </a>
+  </header>
+
+  @if (loading()) {
+    <mat-progress-bar
+      mode="indeterminate"
+      [attr.aria-label]="'prescription.loading' | translate"
+    ></mat-progress-bar>
+  } @else if (loadFailed()) {
+    <p class="error" role="alert">{{ 'prescription.loadFailed' | translate }}</p>
+  } @else {
+    @if (document(); as current) {
+      <div class="actions no-print">
+        <button mat-flat-button color="primary" type="button" [disabled]="busy()" (click)="print()">
+          {{ 'prescription.print' | translate }}
+        </button>
+        @if (printedAt()) {
+          <button mat-stroked-button type="button" [disabled]="busy()" (click)="showCurrent()">
+            {{ 'prescription.showCurrent' | translate }}
+          </button>
+        }
+      </div>
+
+      @if (printedAt(); as when) {
+        <p class="notice no-print" role="status">
+          {{ 'prescription.printedContent' | translate }} {{ when | date: 'medium' }}
+        </p>
+      }
+
+      <article class="prescription-print-area">
+        <header class="clinic">
+          <h2>{{ current.clinic.clinicName }}</h2>
+          @if (current.clinic.doctorName) {
+            <p>{{ current.clinic.doctorName }}</p>
+          }
+          @if (current.clinic.qualifications) {
+            <p>{{ current.clinic.qualifications }}</p>
+          }
+          @if (current.clinic.registrationNumber) {
+            <p>
+              {{ 'prescription.registration' | translate }}: {{ current.clinic.registrationNumber }}
+            </p>
+          }
+          @if (current.clinic.address) {
+            <p>{{ current.clinic.address }}</p>
+          }
+          @if (current.clinic.phoneNumber) {
+            <p>{{ current.clinic.phoneNumber }}</p>
+          }
+        </header>
+
+        <section class="patient">
+          <p>
+            <strong>{{ 'prescription.patient' | translate }}:</strong>
+            {{ current.patient.fullName }}
+          </p>
+          <p>
+            <strong>{{ 'prescription.dateOfBirth' | translate }}:</strong>
+            {{ current.patient.dateOfBirth | date: 'mediumDate' }}
+          </p>
+          <p>
+            <strong>{{ 'prescription.date' | translate }}:</strong>
+            {{ current.prescription.prescriptionDate | date: 'mediumDate' }}
+          </p>
+        </section>
+
+        @if (current.vitals; as vitals) {
+          <section class="vitals">
+            <h3>{{ 'prescription.vitals' | translate }}</h3>
+            <p>
+              {{ 'consultation.vitals.temperature' | translate }}: {{ vitals.temperature ?? '–' }} ·
+              {{ 'consultation.vitals.systolic' | translate }}:
+              {{ vitals.bloodPressureSystolic ?? '–' }} ·
+              {{ 'consultation.vitals.diastolic' | translate }}:
+              {{ vitals.bloodPressureDiastolic ?? '–' }} ·
+              {{ 'consultation.vitals.pulse' | translate }}: {{ vitals.pulse ?? '–' }}
+            </p>
+          </section>
+        }
+
+        @if (current.diagnoses.length > 0) {
+          <section class="diagnoses">
+            <h3>{{ 'prescription.diagnosis' | translate }}</h3>
+            <ul>
+              @for (diagnosis of current.diagnoses; track $index) {
+                <li>
+                  {{ diagnosis.text }}
+                  @if (diagnosis.code) {
+                    <span>({{ diagnosis.code }})</span>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        <section class="medications">
+          <h3>{{ 'prescription.medications' | translate }}</h3>
+          <ol>
+            @for (medication of current.medications; track $index) {
+              <li>
+                <strong>{{ medication.medicineName }}</strong
+                >, {{ medication.dosage }}, {{ medication.frequency }}, {{ medication.duration }}
+                @if (medication.specialInstructions) {
+                  <span>({{ medication.specialInstructions }})</span>
+                }
+              </li>
+            }
+          </ol>
+        </section>
+
+        @if (current.clinic.footerNotes) {
+          <footer class="footer-notes">
+            <p>{{ current.clinic.footerNotes }}</p>
+          </footer>
+        }
+      </article>
+
+      <section class="reprints no-print">
+        <h2>{{ 'prescription.previousPrints' | translate }}</h2>
+        @if (prints().length === 0) {
+          <p class="empty">{{ 'prescription.noPrints' | translate }}</p>
+        } @else {
+          <ul>
+            @for (print of prints(); track print.prescriptionPrintId) {
+              <li>
+                {{ print.printedAt | date: 'medium' }}
+                <button mat-button type="button" [disabled]="busy()" (click)="reprint(print)">
+                  {{ 'prescription.reprint' | translate }}
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    } @else {
+      <div class="notice no-print" role="status">
+        <p>{{ 'prescription.notIssued' | translate }}</p>
+        <button mat-flat-button color="primary" type="button" [disabled]="busy()" (click)="issue()">
+          {{ 'prescription.issue' | translate }}
+        </button>
+        @if (issueError(); as message) {
+          <p class="error" role="alert">{{ message }}</p>
+        }
+      </div>
+    }
+  }
+</section>
