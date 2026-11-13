@@ -1,0 +1,55 @@
+<section class="visit-history" aria-labelledby="visits-heading">
+  <h2 id="visits-heading">{{ 'patients.visitsTitle' | translate }}</h2>
+
+  <form class="range" [formGroup]="range" (ngSubmit)="apply()" novalidate>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'patients.visitsFrom' | translate }}</mat-label>
+      <input matInput type="date" formControlName="from" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'patients.visitsTo' | translate }}</mat-label>
+      <input matInput type="date" formControlName="to" />
+    </mat-form-field>
+    <div class="range-actions">
+      <button mat-flat-button color="primary" type="submit">
+        {{ 'patients.visitsApply' | translate }}
+      </button>
+      <button mat-button type="button" (click)="clear()">
+        {{ 'patients.visitsClear' | translate }}
+      </button>
+    </div>
+  </form>
+
+  @if (rangeError()) {
+    <p class="error" role="alert">{{ 'patients.visitsRangeInvalid' | translate }}</p>
+  }
+
+  @if (failed()) {
+    <p class="error" role="alert">{{ 'patients.visitsFailed' | translate }}</p>
+  } @else {
+    @if (page(); as current) {
+      @if (current.items.length === 0) {
+        <p class="empty">{{ 'patients.noVisits' | translate }}</p>
+      } @else {
+        <ul class="rows">
+          @for (visit of current.items; track visit.visitId) {
+            <li class="row">
+              <span class="time">{{ visit.startedAt | date: 'EEE d MMM yyyy, shortTime' }}</span>
+              <span class="status">{{ statusKey(visit.statusId) | translate }}</span>
+              <a mat-button [routerLink]="['/consultation/visits', visit.visitId, 'notes']">
+                {{ 'patients.openVisit' | translate }}
+              </a>
+            </li>
+          }
+        </ul>
+        <mat-paginator
+          [length]="current.totalCount"
+          [pageSize]="visitsPageSize"
+          [pageIndex]="pageNumber() - 1"
+          [hidePageSize]="true"
+          (page)="changePage($event)"
+        ></mat-paginator>
+      }
+    }
+  }
+</section>

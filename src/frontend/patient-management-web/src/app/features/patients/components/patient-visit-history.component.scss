@@ -1,0 +1,43 @@
+:host {
+  display: block;
+}
+
+.visit-history {
+  display: grid;
+  gap: 12px;
+}
+
+.range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.range-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.error {
+  color: var(--mat-sys-error, #b3261e);
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant, #49454f);
+}

@@ -75,6 +75,9 @@ public static class ApplicationServiceCollectionExtensions
 
         services.AddScoped<Appointments.Handlers.PatientAppointmentHistoryHandler>();
         services.AddScoped<IValidator<Appointments.PatientAppointmentHistoryQuery>, Validators.PatientAppointmentHistoryValidator>();
+
+        services.AddScoped<Visits.Handlers.PatientVisitHistoryHandler>();
+        services.AddScoped<IValidator<Visits.PatientVisitHistoryQuery>, Validators.PatientVisitHistoryValidator>();
         return services;
     }
 }
