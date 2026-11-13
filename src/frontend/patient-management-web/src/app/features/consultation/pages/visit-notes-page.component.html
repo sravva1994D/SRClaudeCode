@@ -119,7 +119,11 @@
         >
           {{ 'consultation.notes.save' | translate }}
         </button>
-        @if (!notInProgress()) {
+        @if (notInProgress()) {
+          <a mat-stroked-button [routerLink]="['/prescription/visits', visitId()]">
+            {{ 'consultation.notes.prescriptionLink' | translate }}
+          </a>
+        } @else {
           <button
             mat-flat-button
             color="accent"

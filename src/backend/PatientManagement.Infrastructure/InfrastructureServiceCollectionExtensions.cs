@@ -56,6 +56,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IMedicationRepository, SqlMedicationRepository>();
         services.AddScoped<IMedicineSuggestionRepository, SqlMedicineSuggestionRepository>();
         services.AddScoped<IPrescriptionRepository, SqlPrescriptionRepository>();
+        services.AddScoped<IPrescriptionPrintRepository, SqlPrescriptionPrintRepository>();
+        services.AddSingleton<IPrescriptionSnapshotCodec, PrescriptionSnapshotCodec>();
 
         services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
         return services;

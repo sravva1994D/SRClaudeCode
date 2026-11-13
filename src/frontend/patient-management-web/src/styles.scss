@@ -22,3 +22,24 @@ body {
   background: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
 }
+
+// Printing shows only the prescription print area (plan Sprint 9, item 41). Everything else, including the navigation
+// and the controls, is hidden for paper.
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .prescription-print-area,
+  .prescription-print-area * {
+    visibility: visible;
+  }
+
+  .prescription-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    border: none;
+  }
+}
